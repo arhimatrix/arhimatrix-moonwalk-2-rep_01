@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moonwalk 2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#0B0F16; --surface:#131923; --ink:#E6E4DE; --muted:#A0A7B3; --faint:#6E7582; --line:#232A37;
+  --red:#E8674F; --blue:#7C9CF2;
+  --s1:#6A8AE6; --s2:#E0624A; --s3:#35A882;
+  --tool:#9AA4B5; --cut:#E6E4DE; --hatchbg:#131923;
+  --space:#0B0F16; --space-ink:#E7E4DC; --space-muted:#9CA3B0; --accent-hot:#E88A6F;
+  --display:'Archivo', 'Arial Narrow', Arial, sans-serif;
+  --body:'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+  --mono:'IBM Plex Mono', 'Courier New', monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font:17px/1.6 var(--body); margin:0}
+a{color:var(--blue)}
+:focus-visible{outline:2px solid var(--red); outline-offset:3px}
+h1,h2,h3,h4{font-family:var(--display); text-wrap:balance; margin:0}
+p{margin:0}
+.wrap{max-width:1200px; margin:0 auto; padding-inline:clamp(16px,4vw,40px)}
+.eyebrow{font:500 12px/1.4 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--red)}
+.num{font-variant-numeric:tabular-nums}
+.k{font:500 11px/1.4 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+
+/* nav */
+.nav{position:fixed; left:0; right:0; top:0; padding-top:env(safe-area-inset-top,0px); z-index:30; background:linear-gradient(var(--space) 0%, rgba(11,15,22,.0) 100%); transition:background .3s}
+.nav.solid{background:rgba(11,15,22,.92); backdrop-filter:blur(8px)}
+.nav .wrap{display:flex; align-items:center; gap:22px; height:52px; overflow-x:auto; scrollbar-width:none}
+.nav b{font:700 14px/1 var(--display); font-stretch:118%; color:var(--space-ink); letter-spacing:.05em; white-space:nowrap; margin-right:auto}
+.nav a{font:400 13px/1 var(--mono); color:var(--space-muted); text-decoration:none; white-space:nowrap}
+.nav a:hover{color:var(--space-ink)}
+
+/* story */
+.story{position:relative; background:var(--space); color:var(--space-ink)}
+.stage{position:sticky; top:0; height:100vh; height:100svh; overflow:hidden}
+#moon{position:absolute; inset:0; width:100%; height:100%; display:block}
+.vignette{position:absolute; inset:0; background:linear-gradient(90deg, rgba(11,15,22,.62) 0%, rgba(11,15,22,.30) 34%, rgba(11,15,22,0) 56%), radial-gradient(ellipse at 70% 50%, transparent 45%, rgba(11,15,22,.5) 100%); pointer-events:none}
+.pin{position:absolute; left:0; top:0; pointer-events:none; font:500 12px/1.35 var(--mono); color:var(--space-ink); white-space:nowrap; opacity:0; transition:opacity .35s; will-change:transform}
+.pin i{position:absolute; left:-5px; top:-5px; width:10px; height:10px; border:1.5px solid var(--accent-hot); border-radius:50%}
+.pin span{position:absolute; left:14px; top:-9px; padding:2px 6px; background:rgba(11,15,22,.72)}
+.pin span em{font-style:normal; color:var(--accent-hot); letter-spacing:.1em; text-transform:uppercase; display:block; font-size:10px}
+.pin.base i{width:14px; height:14px; left:-7px; top:-7px; background:var(--accent-hot); box-shadow:0 0 0 6px rgba(232,138,111,.25)}
+.rail{position:absolute; right:clamp(12px,3vw,32px); top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:14px; z-index:3}
+.rail button{all:unset; cursor:pointer; display:flex; align-items:center; gap:10px; justify-content:flex-end; font:500 11px var(--mono); letter-spacing:.1em; color:var(--space-muted); text-transform:uppercase}
+.rail button span{opacity:0; transition:opacity .2s}
+.rail button:hover span,.rail button.on span{opacity:1}
+.rail button::after{content:""; width:8px; height:8px; border-radius:50%; border:1.5px solid var(--space-muted)}
+.rail button.on{color:var(--space-ink)}
+.rail button.on::after{background:var(--accent-hot); border-color:var(--accent-hot)}
+@media (max-width:640px){.rail{display:none}}
+.coords{position:absolute; left:clamp(16px,4vw,40px); bottom:24px; font:400 12px var(--mono); color:var(--space-muted); letter-spacing:.06em; z-index:3}
+.steps{position:relative; z-index:2; margin-top:-100vh; margin-top:-100svh; pointer-events:none}
+.step{min-height:120vh; display:flex; align-items:center}
+.step:first-child{min-height:100vh; align-items:flex-start; padding-top:clamp(96px,16vh,170px)}
+.step:last-child{min-height:110vh}
+.card{pointer-events:auto; max-width:460px; padding:0; text-shadow:0 1px 2px rgba(0,0,0,.95), 0 0 18px rgba(0,0,0,.85), 0 0 42px rgba(0,0,0,.6); display:flex; flex-direction:column; gap:12px}
+.card h2{font-size:clamp(28px,3.4vw,40px); font-weight:720; font-stretch:112%; line-height:1.05}
+.card p{color:#F1EFE9; font-size:17px}
+.card h2{color:#FFFFFF}
+.card .eyebrow{color:var(--accent-hot)}
+.card .facts{display:grid; grid-template-columns:1fr 1fr; gap:14px 20px; margin-top:6px}
+.card .facts b{display:block; font:700 22px/1.1 var(--display); font-stretch:110%; color:var(--space-ink)}
+.card .facts span{font-size:13px; color:var(--space-muted)}
+.title{pointer-events:auto; display:flex; flex-direction:column; gap:22px; max-width:720px}
+.title .eyebrow{color:var(--accent-hot)}
+.title h1{font-size:clamp(60px,12vw,168px); font-weight:800; font-stretch:125%; line-height:.88; letter-spacing:-.01em}
+.title .lede{max-width:34ch; font-size:clamp(18px,2vw,22px); line-height:1.45}
+.title .cue{font:500 12px var(--mono); letter-spacing:.16em; color:var(--space-muted); margin-top:12px}
+.fade{height:220px; background:linear-gradient(var(--space), var(--bg)); margin-top:-1px}
+
+/* sections */
+section.s{padding-block:clamp(56px,8vw,112px)}
+.head{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:20px 64px; align-items:end; margin-bottom:44px}
+.head h2{font-size:clamp(34px,5vw,62px); font-weight:760; font-stretch:112%; line-height:1}
+.head p{color:var(--muted); max-width:62ch}
+@media (max-width:820px){.head{grid-template-columns:1fr}}
+
+.site-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:36px 40px}
+.site-grid div{display:flex; flex-direction:column; gap:6px}
+.site-grid .v{font:700 28px/1.1 var(--display); font-stretch:110%}
+.site-grid p{font-size:15px; color:var(--muted)}
+@media (max-width:820px){.site-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.site-grid{grid-template-columns:1fr}}
+.zones{margin-top:64px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px 40px}
+.zones div{display:flex; flex-direction:column; gap:4px}
+.zones b{font-family:var(--display); font-weight:680; font-size:19px}
+.zones span{color:var(--muted); font-size:15px}
+@media (max-width:820px){.zones{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.zones{grid-template-columns:1fr}}
+
+/* block explorer */
+.rules{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:32px}
+.rules div{display:flex; flex-direction:column; gap:6px}
+.rules h3{font-size:21px; font-weight:700; font-stretch:108%}
+.rules p{font-size:15px; color:var(--muted)}
+@media (max-width:900px){.rules{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.rules{grid-template-columns:1fr}}
+.explorer{margin-top:64px; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); background:var(--surface); box-shadow:0 1px 0 var(--line), 0 20px 60px -30px rgba(0,0,0,.25)}
+@media (max-width:920px){.explorer{grid-template-columns:1fr}}
+.viewer{position:relative; min-height:440px; background:radial-gradient(ellipse at 50% 40%, #232a38, #0E121A)}
+#blk{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab}
+.viewer .hint{position:absolute; left:16px; bottom:14px; font:400 12px var(--mono); color:#9CA3B0}
+.viewer .tagline{position:absolute; left:16px; top:14px; font:500 11px var(--mono); letter-spacing:.12em; color:#E7E4DC; text-transform:uppercase}
+.panel{padding:26px 28px; display:flex; flex-direction:column; gap:20px}
+.seg{display:flex; flex-wrap:wrap; gap:6px}
+.seg button{font:500 13px var(--body); padding:8px 12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.ctl{display:flex; flex-direction:column; gap:8px}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+select{font:500 14px var(--body); padding:8px 10px; background:var(--bg); color:var(--ink); border:1px solid var(--line); width:100%}
+.slider{display:grid; grid-template-columns:58px 1fr 74px; gap:10px; align-items:center; font:400 13px var(--mono); color:var(--muted)}
+.slider output{text-align:right; color:var(--ink); font-variant-numeric:tabular-nums}
+input[type=range]{width:100%; accent-color:var(--red)}
+.readout{display:grid; grid-template-columns:auto 1fr; gap:4px 24px; align-items:end; padding-top:18px; border-top:1px solid var(--line)}
+.readout .big{font:800 56px/1 var(--display); font-stretch:115%; font-variant-numeric:tabular-nums}
+.readout .big small{font-size:22px; font-weight:600; margin-left:4px}
+.readout .w{font:400 13px/1.6 var(--mono); color:var(--muted)}
+.gauge{display:flex; flex-direction:column; gap:6px}
+.gauge .top{display:flex; justify-content:space-between; gap:12px; font-size:14px}
+.gauge .bar{height:8px; background:var(--bg); position:relative}
+.gauge .fill{position:absolute; left:0; top:0; bottom:0; background:var(--ink); border-radius:0 4px 4px 0; transition:width .25s}
+.gauge .lim{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--red)}
+.chip{font:500 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; padding:2px 7px; white-space:nowrap}
+.chip.ok{background:#1F8A70; color:#fff}
+.chip.over{background:var(--red); color:#fff}
+.chip.na{background:var(--line); color:var(--muted)}
+.note{font:400 12px/1.5 var(--mono); color:var(--muted)}
+
+/* grip bay */
+.bay{margin-top:56px; display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); background:var(--surface)}
+@media (max-width:980px){.bay{grid-template-columns:1fr}}
+.bayview{position:relative; min-height:520px; background:radial-gradient(ellipse at 50% 35%, #2a3140 0%, #10141c 75%)}
+#grip{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab}
+.bayview .tagline{position:absolute; left:16px; top:14px; font:500 11px var(--mono); letter-spacing:.12em; color:#E7E4DC; text-transform:uppercase}
+.bayview .hint{position:absolute; left:16px; bottom:14px; font:400 12px var(--mono); color:#9CA3B0}
+.bayview .phase-l{position:absolute; right:16px; top:14px; font:500 12px var(--mono); color:var(--accent-hot); letter-spacing:.08em}
+.optlist{display:flex; flex-direction:column}
+.opt{all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; gap:8px; padding:20px 24px; border-left:3px solid transparent; border-bottom:1px solid var(--line)}
+.opt:hover{background:rgba(255,255,255,.02)}
+.opt[aria-pressed="true"]{background:rgba(255,255,255,.04)}
+.opt .tag{font:500 12px var(--mono); letter-spacing:.1em; text-transform:uppercase}
+.opt h3{font-size:22px; font-weight:740; font-stretch:110%}
+.opt p{font-size:14px; color:var(--muted)}
+.opt .spec{display:none}
+.opt[aria-pressed="true"] .spec{display:grid}
+.baybar{display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:space-between; padding:16px 24px}
+.baybar .seg button{font-family:var(--mono); font-size:12px}
+/* phases */
+.phases{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0}
+.phase{padding:0 20px 0 0; display:flex; flex-direction:column; gap:10px; position:relative}
+.phase .n{font:800 88px/.85 var(--display); font-stretch:125%; color:var(--line)}
+.phase.p0 .n{color:var(--blue)}
+.phase::before{content:""; position:absolute; left:0; right:0; top:96px; height:2px; background:var(--ink)}
+.phase::after{content:""; position:absolute; left:0; top:91px; width:12px; height:12px; border-radius:50%; background:var(--bg); border:2px solid var(--ink)}
+.phase.p0::after{background:var(--blue); border-color:var(--blue)}
+.phase h3{font-size:22px; font-weight:720; font-stretch:108%; margin-top:30px}
+.phase p{font-size:14px; color:var(--muted)}
+.phase .ok{font-size:14px; color:var(--ink)}
+.here{display:inline-block; font:500 10px var(--mono); letter-spacing:.1em; text-transform:uppercase; background:var(--blue); color:var(--bg); padding:3px 7px; margin-top:6px; align-self:flex-start}
+@media (max-width:980px){.phases{grid-template-columns:1fr 1fr; row-gap:40px}}
+@media (max-width:520px){.phases{grid-template-columns:1fr}}
+
+/* reading */
+.cluster{margin-top:44px}
+.cluster > h3{font:500 13px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+.papers{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px}
+.papers.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:900px){.papers,.papers.two{grid-template-columns:1fr}}
+.paper{background:var(--surface); padding:22px 24px; display:flex; flex-direction:column; gap:10px; transition:transform .2s}
+.paper:hover{transform:translateY(-2px)}
+.paper .src{font:500 12px var(--mono); letter-spacing:.06em; color:var(--red); text-transform:uppercase}
+.paper h4{font:600 19px/1.25 var(--display); font-stretch:104%}
+.paper .au{font-size:14px; color:var(--muted)}
+.paper .why{font-size:15px; flex:1}
+.paper a{font:500 13px var(--mono); text-decoration:none; align-self:flex-start}
+.paper a:hover{text-decoration:underline}
+
+/* interface */
+.evo{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px}
+.evo div{display:flex; flex-direction:column; gap:4px; padding-top:18px; position:relative}
+.evo div::before{content:""; position:absolute; top:0; left:0; right:-24px; height:2px; background:var(--line)}
+.evo div.on::before{background:var(--red)}
+.evo div:last-child::before{right:0}
+.evo b{font-family:var(--display); font-size:18px; font-weight:700}
+.evo p{font-size:14px; color:var(--muted)}
+@media (max-width:820px){.evo{grid-template-columns:1fr 1fr}}
+.photos{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:48px}
+.photos figure{margin:0}
+.photos img{width:100%; aspect-ratio:4/5; object-fit:cover; display:block}
+.photos figcaption{font:400 12px/1.5 var(--mono); color:var(--muted); margin-top:8px}
+@media (max-width:640px){.photos{grid-template-columns:1fr 1fr}.photos figure:last-child{display:none}}
+.seqbar{margin-top:64px; display:flex; flex-wrap:wrap; gap:16px 28px; align-items:center; justify-content:space-between}
+.seqbar .seg button{font-family:var(--mono); font-size:12px; letter-spacing:.06em}
+.drawings{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:20px}
+@media (max-width:980px){.drawings{grid-template-columns:1fr}}
+.dwg{background:var(--surface); display:flex; flex-direction:column; transition:box-shadow .2s}
+.dwg.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.dwg svg{display:block; width:100%; height:auto}
+.dwg .body{padding:18px 22px 22px; display:flex; flex-direction:column; gap:12px; border-top:1px solid var(--line)}
+.dwg .tag{font:500 12px var(--mono); letter-spacing:.1em; text-transform:uppercase}
+.dwg h3{font-size:24px; font-weight:740; font-stretch:112%}
+.dwg dl{margin:0; display:grid; grid-template-columns:1fr; gap:10px}
+.dwg dd{margin:2px 0 0; font-size:14px}
+.spec{display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; font:400 12px/1.5 var(--mono); color:var(--muted); padding-top:10px; border-top:1px solid var(--line)}
+.spec b{color:var(--ink); font-weight:500}
+.why-top{margin-top:40px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); gap:24px 56px; align-items:start}
+.why-top h3{font-size:clamp(24px,3vw,32px); font-weight:740; font-stretch:112%; line-height:1.1}
+.why-top p{max-width:66ch}
+@media (max-width:820px){.why-top{grid-template-columns:1fr}}
+.gh{margin-top:72px}
+.flow{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; margin-top:24px}
+.flow div{padding:16px 18px; display:flex; flex-direction:column; gap:6px; position:relative; background:var(--surface)}
+.flow div + div{box-shadow:inset 1px 0 0 var(--bg)}
+.flow div.key{background:var(--ink); color:var(--bg)}
+.flow div.key .k,.flow div.key p{color:var(--bg); opacity:.8}
+.flow b{font-family:var(--display); font-size:17px; font-weight:700}
+.flow p{font-size:13px; color:var(--muted)}
+.flow div:not(:last-child)::after{content:"→"; position:absolute; right:-9px; top:50%; transform:translateY(-50%); z-index:2; font:500 16px var(--mono); color:var(--muted); background:var(--bg); border-radius:50%; width:18px; height:18px; display:grid; place-items:center; line-height:1}
+@media (max-width:980px){.flow{grid-template-columns:1fr 1fr}.flow div::after{display:none}}
+@media (max-width:480px){.flow{grid-template-columns:1fr}}
+
+/* sim dashboard */
+.tests{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:32px}
+.tests div{display:flex; flex-direction:column; gap:6px}
+.tests h3{font-size:20px; font-weight:700}
+.tests p{font-size:14px; color:var(--muted)}
+@media (max-width:900px){.tests{grid-template-columns:1fr 1fr}}
+.dash{margin-top:56px; background:var(--surface); padding:clamp(18px,3vw,32px); display:flex; flex-direction:column; gap:22px}
+.dash-top{display:flex; flex-wrap:wrap; gap:14px 24px; align-items:center; justify-content:space-between}
+.banner{font:500 12px var(--mono); letter-spacing:.06em; padding:6px 10px; background:var(--bg); border-left:3px solid var(--red)}
+.banner.loaded{border-left-color:var(--s3)}
+.filters{display:flex; flex-wrap:wrap; gap:14px 22px; align-items:center}
+.filters label.k{margin-right:6px}
+.filebtn{font:500 13px var(--body); padding:8px 12px; border:1px solid var(--ink); background:transparent; color:var(--ink); cursor:pointer}
+.tiles{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+.tile{background:var(--bg); padding:16px 18px; display:flex; flex-direction:column; gap:8px}
+.tile .nm{display:flex; align-items:center; gap:8px; font:600 15px var(--display)}
+.tile .nm i{width:10px; height:10px; border-radius:2px}
+.tile .vals{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px}
+.tile .vals b{display:block; font:700 24px/1.1 var(--display); font-stretch:108%; font-variant-numeric:tabular-nums}
+.tile .vals span{font:400 11px/1.3 var(--mono); color:var(--muted)}
+@media (max-width:820px){.tiles{grid-template-columns:1fr}}
+.charts{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:20px}
+@media (max-width:900px){.charts{grid-template-columns:1fr}}
+.chart{position:relative; background:var(--bg); padding:16px 16px 8px}
+.chart h4{font:600 15px var(--display); margin-bottom:2px}
+.chart .sub{font:400 12px var(--mono); color:var(--muted); margin-bottom:8px}
+.chart svg{display:block; width:100%; height:auto; overflow:visible}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:13px; margin-bottom:6px}
+.legend span{display:flex; align-items:center; gap:6px}
+.legend i{width:14px; height:3px; border-radius:2px}
+.tip{position:absolute; pointer-events:none; background:var(--ink); color:var(--bg); font:400 12px/1.5 var(--mono); padding:8px 10px; opacity:0; transition:opacity .12s; white-space:nowrap; z-index:5}
+.tip b{font-weight:500}
+.cmp{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:14px}
+th{font:500 11px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted); text-align:left; padding:8px 12px 8px 0; border-bottom:1px solid var(--ink)}
+td{padding:11px 12px 11px 0; border-bottom:1px solid var(--line); vertical-align:top; font-variant-numeric:tabular-nums}
+td:first-child{font-weight:600}
+.csvfmt{font:400 12px/1.6 var(--mono); color:var(--muted); overflow-x:auto; white-space:nowrap}
+.outcome{margin-top:48px; background:var(--space); color:var(--space-ink); padding:clamp(24px,4vw,44px); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); gap:24px 48px}
+.outcome h3{font-size:clamp(26px,3vw,36px); font-weight:750; font-stretch:112%; line-height:1.1}
+.outcome p{color:#C9CDD6}
+.outcome .eyebrow{color:var(--accent-hot)}
+@media (max-width:820px){.outcome{grid-template-columns:1fr}}
+
+.ask{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:32px}
+.ask div{display:flex; flex-direction:column; gap:6px}
+.ask .qn{font:800 40px/1 var(--display); font-stretch:125%; color:var(--red)}
+.ask b{font-family:var(--display); font-size:19px; font-weight:700}
+.ask p{font-size:14px; color:var(--muted)}
+@media (max-width:900px){.ask{grid-template-columns:1fr 1fr}}
+.plan{overflow-x:auto; margin-top:72px}
+.plan td:first-child{font-family:var(--mono); font-weight:500}
+.plan tr.now td{background:color-mix(in srgb, var(--blue) 10%, transparent)}
+footer{background:var(--space); color:var(--space-muted); padding-block:40px; font:400 13px/1.6 var(--mono)}
+footer .wrap{display:flex; flex-wrap:wrap; gap:8px 32px; justify-content:space-between}
+footer b{color:var(--space-ink); font-weight:500}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<nav class="nav" id="nav" aria-label="Sections"><div class="wrap">
+<b>MOONWALK 2.0</b>
+<a href="#site">Site</a><a href="#block">Block</a><a href="#phases">Phases</a><a href="#reading">Reading</a><a href="#interface">Interface</a><a href="#sim">Simulation</a><a href="#lab">Next steps</a>
+</div></nav>
+
+<div class="story" id="story">
+<div class="stage">
+<canvas id="moon" aria-label="3D moon: it rotates, tilts to the lunar south pole and zooms in on the base site as you scroll"></canvas>
+<div class="vignette"></div>
+<div class="pin base" id="pin-base"><i></i><span><em>Base site</em>Lunar south pole</span></div>
+<div class="pin" id="pin-shack"><i></i><span><em>Crater · ~21 km</em>Shackleton</span></div>
+<div class="pin" id="pin-gerl"><i></i><span><em>Crater</em>de Gerlache</span></div>
+<div class="pin" id="pin-cab"><i></i><span><em>LCROSS impact 2009</em>Cabeus</span></div>
+<nav class="rail" id="rail" aria-label="Site tour"></nav>
+<p class="coords" id="coords">NEAR SIDE</p>
+</div>
+<div class="steps" id="steps">
+<div class="step" data-label="Moonwalk"><div class="wrap" style="width:100%"><div class="title">
+<p class="eyebrow">Space Robotics Lab · Tohoku University · Phase 0</p>
+<h1>Moonwalk 2.0</h1>
+<p class="lede">Towards a permanent human presence on the Moon. Robots build the outpost's whole shell from one family of regolith blocks, before crew arrives.</p>
+<p class="cue">▼ SCROLL TO THE SITE</p>
+</div></div></div>
+<div class="step" data-label="The pole"><div class="wrap" style="width:100%"><div class="card">
+<p class="eyebrow">Base site</p><h2>The lunar south pole</h2>
+<p>At the pole the Sun never rises more than about 1.5° above the horizon. Light arrives sideways, and long shadows shape the terrain. Every structure in the program answers to that low light.</p>
+</div></div></div>
+<div class="step" data-label="Lit ridges"><div class="wrap" style="width:100%"><div class="card">
+<p class="eyebrow">Zoom · power</p><h2>Ridges that stay lit</h2>
+<p>Some crater rims and ridges near the pole, such as the ridge between Shackleton and de Gerlache, are sunlit for most of the year. That is where the power plant goes: vertical solar masts catching horizontal light.</p>
+</div></div></div>
+<div class="step" data-label="Shadow"><div class="wrap" style="width:100%"><div class="card">
+<p class="eyebrow">Zoom · resources</p><h2>Craters that never see the Sun</h2>
+<p>Crater floors in permanent shadow are among the coldest places measured in the solar system, and they hold water ice. NASA's LCROSS impactor confirmed water when it struck Cabeus in 2009.</p>
+</div></div></div>
+<div class="step" data-label="Constraints"><div class="wrap" style="width:100%"><div class="card">
+<p class="eyebrow">What the site asks of the block</p><h2>Design inputs</h2>
+<div class="facts">
+<div><b>1/6 g</b><span>Lift scales ~6×; block inertia does not</span></div>
+<div><b>10–20°</b><span>Slopes the robots can handle</span></div>
+<div><b>Dry-stacked</b><span>Extreme thermal swings crack bonded joints</span></div>
+<div><b>Dust-tolerant</b><span>Fine, abrasive, charged regolith</span></div>
+</div>
+</div></div></div>
+</div>
+</div>
+
+<main>
+<section class="s" id="site"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">01 · The site</p><h2>The south pole sets the rules</h2></div>
+<p>Every number below is an input to the block. The site is zoned so that every structure is a compressive block form and every distance is a block count.</p>
+</div>
+<div class="site-grid">
+<div><span class="k">Light</span><span class="v">Sun on the horizon</span><p>Solar collection on vertical masts, not ground panels. Quarry and print yard sit in the lit zone.</p></div>
+<div><span class="k">Gravity</span><span class="v num">1/6 g</span><p>Robot lift capacity scales about 6×. Compressive structures carry lower self-weight but the same tensile weakness.</p></div>
+<div><span class="k">Slopes</span><span class="v num">10–20°</span><p>What the robots handle, by configuration. Haul paths stay below it; ramps are built from blocks.</p></div>
+<div><span class="k">Thermal</span><span class="v">Extreme swings</span><p>No bonded joints to crack. Guideway alignment checked across cycles.</p></div>
+<div><span class="k">Regolith</span><span class="v">Abrasive, charged</span><p>Sealed robot joints, dust-tolerant grip surfaces, sintered pad face against plume erosion.</p></div>
+<div><span class="k">Link</span><span class="v">Earth–Moon delay</span><p>Supervised autonomy. The digital twin runs locally at the outpost.</p></div>
+</div>
+<div class="zones">
+<div><span class="k">Zone</span><b>Landing pad</b><span>Downrange of everything, on the flattest ground, with a berm ring toward the outpost.</span></div>
+<div><span class="k">Zone</span><b>Power plant</b><span>On the ridge with the longest illumination; storage in a shielded hollow beside it.</span></div>
+<div><span class="k">Zone</span><b>Corridor</b><span>The straightest line from pad to habitat. Guideway alignment is the tightest tolerance on site.</span></div>
+<div><span class="k">Zone</span><b>Habitat vault</b><span>Behind natural terrain at the corridor's far end, for free shielding.</span></div>
+<div><span class="k">Zone</span><b>Logistics bays</b><span>Along the corridor, where the pod stops.</span></div>
+<div><span class="k">Zone</span><b>Quarry and print yard</b><span>Next to the power plant: the shortest haul from regolith to block to structure.</span></div>
+</div>
+</div></section>
+
+<section class="s" id="block"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">02 · The block</p><h2>One family, sized to the robot</h2></div>
+<p>A redesign of the lab's block as an osteomorphic block (Dyskin et al. 2003, 2005): two matching curved faces, the bottom one shifted by half a length, so each course self-aligns in running bond and holds without mortar under a peripheral constraint. Grades change density, finish and seat, never the interlock.</p>
+</div>
+<div class="rules">
+<div><h3>Compression only</h3><p>Regolith has almost no tensile strength. Pavers, berms, piers, arches, vaults. No mortar, no adhesive.</p></div>
+<div><h3>Self-adjusting</h3><p>Concave meets convex, so a slightly misplaced block slides into place. Low-precision robots and in situ printing are enough.</p></div>
+<div><h3>Sized to the robot</h3><p>Mass is set by manipulator payload and inertia, not by the structure.</p></div>
+<div><h3>Needs a constraint</h3><p>The assembly holds only when confined: by a frame, the terrain, tendons or its own weight.</p></div>
+</div>
+
+<div class="explorer" id="explorer">
+<div class="viewer">
+<canvas id="blk" aria-label="Interactive 3D view of the block with the selected grip interface"></canvas>
+<p class="tagline" id="blkTag">Structural interlock · interface 2</p>
+<p class="hint" id="blkHint">Drag to orbit · z₁ = Δh·φ(x)φ(y) + h · z₂ = Δh·φ(x+a)φ(y) − h</p>
+</div>
+<div class="panel">
+<div class="row2"><div class="ctl"><label class="k" for="phiSel">Surface function φ</label><select id="phiSel"><option value="poly" selected>Polynomial (Dyskin 2003)</option><option value="cos">Cosine (Yong 2011)</option></select></div>
+<div class="ctl"><label class="k" for="ifSel">Grip interface</label><select id="ifSel"><option value="1">1 · Flush side handle</option><option value="2" selected>2 · Top twist-lock slot</option><option value="3">3 · Top pocket grip</option></select></div></div>
+<div class="ctl"><span class="k">Osteomorphic parameters (mm)</span>
+<div class="slider"><label for="dL">2a</label><input type="range" id="dL" min="100" max="400" step="10"><output id="oL"></output></div>
+<div class="slider"><label for="dH">2h</label><input type="range" id="dH" min="60" max="300" step="10"><output id="oH"></output></div>
+<div class="slider"><label for="dD">Δh</label><input type="range" id="dD" min="0" max="80" step="2"><output id="oD"></output></div>
+<p class="note" id="dimNote"></p>
+</div>
+<div class="row2">
+<div class="ctl"><label class="k" for="gradeSel">Grade</label><select id="gradeSel"><option value="structural" selected>Structural interlock</option><option value="paver">Paver</option><option value="bulk">Shielding bulk</option><option value="rail">Rail-seat</option></select></div>
+<div class="ctl"><span class="k">Your CAD</span><label class="filebtn" for="modelIn" style="text-align:center">Load STL / GLB</label><input type="file" id="modelIn" accept=".stl,.glb" hidden></div>
+</div>
+<div class="seg"><button type="button" id="courseBtn" aria-pressed="false">Show two courses</button></div>
+<p class="note" id="modelNote">Export a family member from Rhino in millimetres; the viewer and mass switch to your geometry.</p>
+<div class="ctl"><span class="k">Material</span>
+<div class="seg" id="mSeg" role="group" aria-label="Material"><button type="button" data-m="pla" aria-pressed="true">PLA lab print · 1 g</button><button type="button" data-m="reg">Sintered regolith · Moon</button></div>
+<div class="slider" id="matSlider"><label for="dM" id="dMlab">Infill</label><input type="range" id="dM" min="10" max="100" step="5"><output id="oM"></output></div>
+</div>
+<div class="readout">
+<div><span class="k">Mass</span><div class="big num" id="mass">–</div></div>
+<div class="w" id="weights"></div>
+</div>
+<div class="gauge"><div class="top"><span>Lab arm, single limb (≤ 2 kg at 1 g)</span><span class="chip" id="c1"></span></div><div class="bar"><div class="fill" id="f1"></div><div class="lim" id="l1"></div></div></div>
+<div class="gauge"><div class="top"><span>Lunar handling per limb (≈ 12 kg)</span><span class="chip" id="c2"></span></div><div class="bar"><div class="fill" id="f2"></div><div class="lim" id="l2"></div></div></div>
+<div class="gauge"><div class="top"><span>Blocks per 30 kg wheel-module haul</span><span class="chip na" id="c3"></span></div></div>
+<p class="note">Limits from the program and the MoonBot paper (Uno et al., 2025); the lab arm's own payload is still to confirm. Regolith density is an assumption until WP2 prints are weighed.</p>
+</div>
+</div>
+</div></section>
+
+<section class="s" id="phases"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">03 · Phases</p><h2>The shell first, then the plug-ins</h2></div>
+<p>Phases 1 to 3 are built entirely from blocks by robots, powered by the outpost's own plant. Phase 4 docks systems made on Earth into the finished shell. Each phase hands a capability to the next.</p>
+</div>
+<div class="phases">
+<div class="phase p0"><span class="n">0</span><h3>Ground work</h3><span class="here">We are here</span><p>Block design, simulant prints, robot stacking demo, digital twin of the full program.</p><p class="ok">Robot stacks a pier or arch unattended.</p></div>
+<div class="phase"><span class="n">1</span><h3>Landing pad</h3><p>Sintered pavers plus an ejecta berm ring. Every later landing needs it.</p><p class="ok">Survives repeated plume loading.</p></div>
+<div class="phase"><span class="n">2</span><h3>Power plant</h3><p>Solar masts on block footings, shielded storage, power trunk in block-lined trenches.</p><p class="ok">Robots run on outpost power.</p></div>
+<div class="phase"><span class="n">3</span><h3>Shell</h3><p>Maglev piers and guideway, open habitat vault, logistics bays, all with standard interfaces.</p><p class="ok">Verified against the twin.</p></div>
+<div class="phase"><span class="n">4</span><h3>Plug-ins</h3><p>Robot pod, then cargo, then crew pod and inflatable habitat. The vault closes after insertion.</p><p class="ok">Docks without shell rework.</p></div>
+</div>
+</div></section>
+
+<section class="s" id="reading"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">04 · Literature review</p><h2>Topological interlocking</h2></div>
+<p>The papers the block design is built on, grouped by the question each one answers. Each card says what it contributes to Moonwalk 2.0.</p>
+</div>
+<div class="cluster"><h3>Osteomorphic blocks · the geometry we use</h3>
+<div class="papers">
+<article class="paper"><p class="src">Adv. Eng. Materials 5(3) · 2003</p><h4>Fracture resistant structures based on topological interlocking with non-planar contacts</h4><p class="au">A. V. Dyskin, Y. Estrin, A. J. Kanel-Belov, E. Pasternak</p><p class="why">Defines the osteomorphic block: z₁ = Δh·φ(x)φ(y) + h, z₂ = Δh·φ(x+a)φ(y) − h. The equations behind the explorer above.</p><span class="k">PDF in project library</span></article>
+<article class="paper"><p class="src">PhD thesis · University of Western Australia · 2011</p><h4>Utilisation of topologically-interlocking osteomorphic blocks for multi-purpose civil construction</h4><p class="au">D. Yong Hsien Ta (supervisor A. V. Dyskin)</p><p class="why">Sine/cosine and circular-arc variants of the block, and one block for walls, paving and retaining walls. Source of the cosine φ option.</p><span class="k">PDF in project library</span></article>
+<article class="paper"><p class="src">Nexus Network Journal 26 · 2024</p><h4>Integration of design and performance evaluation for reusable osteomorphic-block masonry</h4><p class="au">K. Harsono, S.-G. Shih, F. Wagiri, W. Alfred</p><p class="why">A design loop of contact interface, block generation, FEA and block set. The same sequence as WP1 to WP2.</p><a href="https://doi.org/10.1007/s00004-023-00756-7" target="_blank" rel="noopener">read ↗</a></article>
+</div></div>
+<div class="cluster"><h3>Topological interlocking and constraint</h3>
+<div class="papers two">
+<article class="paper"><p class="src">Materials Science and Engineering C 31 · 2011</p><h4>Topological interlocking as a material design concept</h4><p class="au">Y. Estrin, A. V. Dyskin, E. Pasternak</p><p class="why">The principle: elements held by shape and a peripheral constraint, with tolerance to missing blocks and crack arrest.</p><a href="https://doi.org/10.1016/j.msec.2010.11.011" target="_blank" rel="noopener">read ↗</a></article>
+<article class="paper"><p class="src">Frontiers of Structural and Civil Engineering 6(2) · 2012</p><h4>Mortarless structures based on topological interlocking</h4><p class="au">A. V. Dyskin, E. Pasternak, Y. Estrin</p><p class="why">Constraint by frame, topography, tendons or self-weight. Tells us what holds a lunar course together.</p><a href="https://doi.org/10.1007/s11709-012-0156-8" target="_blank" rel="noopener">read ↗</a></article>
+<article class="paper"><p class="src">J. Materials Research and Technology 15 · 2021</p><h4>Design of architectured materials based on topological and geometrical interlocking</h4><p class="au">Y. Estrin, V. R. Krishnamurthy, E. Akleman</p><p class="why">Review from platonic solids to Delaunay lofts. The wider design space for the block family.</p><a href="https://doi.org/10.1016/j.jmrt.2021.08.064" target="_blank" rel="noopener">read ↗</a></article>
+<article class="paper"><p class="src">Lecture · Bio-Inspired Materials, Vienna · 2010</p><h4>Topological interlocking as a materials design concept</h4><p class="au">Y. Estrin</p><p class="why">Slides on interlocked cubes, octahedra and osteomorphic blocks, with their mechanical response.</p><span class="k">PDF in project library</span></article>
+</div></div>
+<div class="cluster"><h3>Extraterrestrial construction, fabrication and testing</h3>
+<div class="papers two">
+<article class="paper"><p class="src">Acta Astronautica 57 · 2005</p><h4>The principle of topological interlocking in extraterrestrial construction</h4><p class="au">A. V. Dyskin, Y. Estrin, E. Pasternak, H. C. Khor, A. J. Kanel-Belov</p><p class="why">Osteomorphic bricks sintered from regolith. They self-adjust, so low-precision robots can place them. The case for Moonwalk's block.</p><a href="https://doi.org/10.1016/j.actaastro.2004.12.005" target="_blank" rel="noopener">read ↗</a></article>
+<article class="paper"><p class="src">Materials &amp; Design 254 · 2025</p><h4>3D concrete printing of topological interlocking blocks</h4><p class="au">T. Goertzen, T. Neef, P. Scheffler, D. Macek, V. Mechtcherine, A. C. Niemeyer</p><p class="why">Printed interlocking blocks in a fixed frame. A precedent for the print route and the frame as constraint.</p><a href="https://www.sciencedirect.com/science/article/pii/S0264127525004691" target="_blank" rel="noopener">read ↗</a></article>
+<article class="paper"><p class="src">Materials and Design 186 · 2020</p><h4>Mechanical behaviour of composite structures made of topologically interlocking concrete bricks with soft interfaces</h4><p class="au">A. Rezaee Javan, H. Seifi, X. Lin, Y. M. Xie</p><p class="why">Effect of confining load and interface friction. Feeds the dust and friction cases in simulation.</p><a href="https://www.sciencedirect.com/science/article/pii/S0264127519307853" target="_blank" rel="noopener">read ↗</a></article>
+<article class="paper"><p class="src">IEEE Trans. Field Robotics · 2025</p><h4>MoonBot [confirm full paper title]</h4><p class="au">K. Uno et al., Space Robotics Lab, Tohoku University</p><p class="why">The reference robot from the program: payload, gripper and configurations set block mass and grip limits.</p><a href="https://doi.org/10.1109/TFR.2025.3624346" target="_blank" rel="noopener">read ↗</a></article>
+</div></div>
+</div></section>
+
+<section class="s" id="interface"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">05 · Robot–block interface</p><h2>Exploring end-effector geometry</h2></div>
+<p>The grip is where the block and the robot meet. The method: keep each block body and its interlock fixed, vary only the interface module, and test every interface with the end-effector designed for it.</p>
+</div>
+<div class="evo">
+<div class="on"><span class="k">Step 1 · now</span><b>Lab block today</b><p>Two cone locators on top, a bar handle standing off one side, gripped by the lab's C-jaw.</p></div>
+<div class="on"><span class="k">Step 2 · now</span><b>Three interface options</b><p>One compatible with the lab jaw, two gripping from above.</p></div>
+<div><span class="k">Step 3 · WP4</span><b>Test in Isaac Sim</b><p>All three on the same blocks, same tasks, same metrics.</p></div>
+<div><span class="k">Step 4 · after</span><b>Select, print, lab test</b><p>The best interface is printed and tried on the real arm, as the lab allows.</p></div>
+</div>
+
+<div class="bay" id="bay">
+<div class="bayview">
+<canvas id="grip" aria-label="3D view of the selected end-effector gripping the lab block, animated through approach, engage, actuate and lift"></canvas>
+<p class="tagline" id="gripTag">Option 2 · top twist-lock</p>
+<p class="phase-l" id="gripPhase">1 · APPROACH</p>
+<p class="hint">Drag to orbit · concept end-effectors on the osteomorphic block, running bond</p>
+</div>
+<div style="display:flex; flex-direction:column">
+<div class="optlist" id="optList">
+<button type="button" class="opt" data-o="1" aria-pressed="false"><span class="tag" style="color:var(--s1)">Option 1 · Lab-compatible</span><h3>Flush side handle + C-jaw</h3><p>Existing lab end-effector (C-jaw on a bar). The handle is built into the printed body and recessed flush, so it matches the existing jaw without sticking out.</p>
+<span class="spec"><span>Approach <b>horizontal</b></span><span>Actuation <b>jaw closes</b></span><span>Side access <b>front face free</b></span><span>Hardware <b>existing</b></span></span></button>
+<button type="button" class="opt" data-o="2" aria-pressed="true"><span class="tag" style="color:var(--s2)">Option 2 · Top twist-lock</span><h3>Key into slot, turn 90°</h3><p>New end-effector: a T-key enters the top slot and turns 90° under the undercut. The slot and cavity modelled this morning carry straight over.</p>
+<span class="spec"><span>Approach <b>vertical</b></span><span>Actuation <b>wrist turn 90°</b></span><span>Side access <b>none</b></span><span>Hold <b>form lock</b></span></span></button>
+<button type="button" class="opt" data-o="3" aria-pressed="false"><span class="tag" style="color:var(--s3)">Option 3 · Top pocket grip</span><h3>Two fingers spread outward</h3><p>New end-effector: two fingers on a linear slide enter pockets in the free top corners and spread against the pocket walls.</p>
+<span class="spec"><span>Approach <b>vertical</b></span><span>Actuation <b>fingers spread</b></span><span>Side access <b>none</b></span><span>Hold <b>friction + wall</b></span></span></button>
+</div>
+<div class="baybar">
+<div class="seg" id="seqSeg" role="group" aria-label="Grip sequence step">
+<button type="button" data-s="0" aria-pressed="true">1 Approach</button><button type="button" data-s="1">2 Engage</button><button type="button" data-s="2">3 Actuate</button><button type="button" data-s="3">4 Lift</button>
+</div>
+<button type="button" class="filebtn" id="seqPlay">▶ Play</button>
+</div>
+</div>
+</div>
+<div class="why-top">
+<h3>Why gripping from above matters</h3>
+<p><b>Options 2 and 3 grip from above.</b> One end-effector then works for walls, columns and plates, because the top face is free in all of them, and blocks can be placed tightly side by side with no room needed for side access. Option 1 stays as the baseline: it runs on the lab's current hardware.</p>
+</div>
+
+<div class="gh">
+<p class="eyebrow">How the options are organised</p>
+<h3 style="font-size:clamp(26px,3vw,34px); font-weight:740; font-stretch:112%; margin-top:8px">One Grasshopper definition, one switch</h3>
+<p style="color:var(--muted); max-width:68ch; margin-top:10px">The block body and its interlocking features stay the same for all options. The grip is a separate interface module, chosen with a Value List (a drop-down). Every block in the family can then carry any of the three interfaces. The switch below drives the 3D explorer and the drawings on this page.</p>
+<div class="flow">
+<div><span class="k">Inputs</span><b>Shared parameters</b><p>Envelope, mass, interlock depth, print tolerance</p></div>
+<div><span class="k">Fixed per member</span><b>Body + interlock</b><p>Plate, column, wall or voussoir</p></div>
+<div class="key"><label class="k" for="ghSel">Value List</label><b>Interface module</b><select id="ghSel" style="margin-top:4px"><option value="1">1 · Flush side handle</option><option value="2" selected>2 · Top twist-lock</option><option value="3">3 · Top pocket grip</option></select></div>
+<div><span class="k">Family</span><b>Every member</b><p id="famNote">Carries the chosen interface</p></div>
+<div><span class="k">Outputs</span><b>STL + USD</b><p>Print files for the desktop printer, assets for Isaac Sim</p></div>
+</div>
+</div>
+</div></section>
+
+<section class="s" id="sim"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">06 · Simulation</p><h2>Testing all three in Isaac Sim</h2></div>
+<p>Each end-effector is modelled as a simple gripper and tested on the same blocks, through the same tasks, with the same metrics. The dashboard below is built to read the simulation logs directly.</p>
+</div>
+<div class="tests">
+<div><h3>Grip reliability</h3><p>Pick, lift and carry: does the block stay held through acceleration and turns?</p></div>
+<div><h3>Placement precision</h3><p>Position error after seating on the course below, in mm.</p></div>
+<div><h3>Misalignment</h3><p>Start offset stepped up until the block no longer seats. The limit is the capture range.</p></div>
+<div><h3>Dust</h3><p>Lower friction and partly filled features, to see which interface degrades first.</p></div>
+</div>
+
+<div class="dash" id="dash">
+<div class="dash-top">
+<p class="banner" id="banner">ILLUSTRATIVE DATA · NOT RESULTS · load an Isaac Sim CSV to replace</p>
+<div style="display:flex; gap:10px; align-items:center">
+<label class="filebtn" for="csvIn">Load results CSV</label><input type="file" id="csvIn" accept=".csv,text/csv" hidden>
+<button type="button" class="filebtn" id="resetData">Reset</button>
+</div>
+</div>
+<div class="filters">
+<div><span class="k">Condition</span>
+<div class="seg" id="condSeg" role="group" aria-label="Condition" style="margin-top:6px"><button type="button" data-c="nominal" aria-pressed="true">Nominal</button><button type="button" data-c="dust">Dust</button><button type="button" data-c="lunar">Lunar g</button></div></div>
+<div style="min-width:200px"><label class="k" for="blkFilter">Family member</label><select id="blkFilter" style="margin-top:6px"><option value="all">All members</option><option value="plate">Plate</option><option value="column">Column</option><option value="wall">Wall</option><option value="arch">Arch voussoir</option></select></div>
+</div>
+<div class="tiles" id="tiles"></div>
+<div class="charts">
+<div class="chart" id="chA"><h4>Grip success vs start offset</h4><p class="sub">% of trials seated · lateral offset in mm</p><div class="legend" id="legA"></div><svg id="svgA" viewBox="0 0 560 300" role="img" aria-label="Line chart of grip success rate against start offset for the three options"></svg><div class="tip" id="tipA"></div></div>
+<div class="chart" id="chB"><h4>Placement error</h4><p class="sub">successful trials · mm · bar = median</p><svg id="svgB" viewBox="0 0 420 300" role="img" aria-label="Strip plot of placement error per option with median markers"></svg><div class="tip" id="tipB"></div></div>
+</div>
+<div class="cmp"><table id="cmpT"></table></div>
+<p class="csvfmt">CSV columns: option (1–3), member (plate | column | wall | arch), condition (nominal | dust | lunar), offset_mm, success (0/1), place_err_mm</p>
+</div>
+
+<div class="outcome">
+<div><p class="eyebrow">Research outcome</p><h3>A measured comparison of three robot–block interfaces</h3></div>
+<div style="display:flex; flex-direction:column; gap:12px"><p>How much placement tolerance each interface buys, and at what cost in hardware. The result feeds the robot–block section of the paper and tells the lab which interface to print and try on the real arm.</p><p style="font:400 13px var(--mono); color:var(--space-muted)">WP4 · weeks 7–9 of the 11-week plan · learning Isaac Sim in parallel now</p></div>
+</div>
+</div></section>
+
+<section class="s" id="lab"><div class="wrap">
+<div class="head">
+<div><p class="eyebrow">07 · Next steps</p><h2>What to ask the lab</h2></div>
+<p>Four answers decide whether option 1 stays the baseline only, or whether options 2 and 3 can go onto the real arm.</p>
+</div>
+<div class="ask">
+<div><span class="qn">Q1</span><b>Can it change?</b><p>Can the end-effector be modified or replaced?</p></div>
+<div><span class="qn">Q2</span><b>Jaw dimensions</b><p>The current jaw's dimensions and clamping range.</p></div>
+<div><span class="qn">Q3</span><b>Payload</b><p>The arm's payload limit, which caps block mass in the explorer above.</p></div>
+<div><span class="qn">Q4</span><b>CAD file</b><p>Whether a CAD file of the end-effector exists, for the simulation model.</p></div>
+</div>
+<div class="plan">
+<table>
+<tr><th style="width:14%">Weeks</th><th style="width:48%">Focus</th><th>Milestone</th></tr>
+<tr class="now"><td>1–2</td><td>WP1: constraints fixed, parametric block family modelled, first PLA prints</td><td>Block family frozen in CAD</td></tr>
+<tr><td>3–4</td><td>WP2: desktop-printed geometry checks, fiducial legibility, iterate and freeze</td><td>Geometry checked on printed parts</td></tr>
+<tr><td>5–6</td><td>WP3: structures and plug-in interfaces designed from the block family</td><td>Interface specification issued</td></tr>
+<tr><td>7–9</td><td>WP4: Isaac Sim set up, robot models imported, three interfaces tested</td><td>Robot places blocks in simulation; limits documented</td></tr>
+<tr><td>10–11</td><td>WP5: full build simulation, animation, paper draft</td><td>Animation and paper draft delivered</td></tr>
+</table>
+</div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+<span><b>Moonwalk 2.0</b> · Nina Velimirović</span>
+<span>Moon surface map: Celestia (Clementine/NASA data); relief map: Stellarium</span>
+</div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+/* ---------- shared state ---------- */
+var State={iface:'2', listeners:[]};
+function setIface(v){State.iface=String(v); State.listeners.forEach(function(f){f(State.iface);});}
+function onIface(f){State.listeners.push(f);}
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function pressed(seg,btn){seg.querySelectorAll('button[data-'+Object.keys(btn.dataset)[0]+']').forEach(function(b){b.setAttribute('aria-pressed',b===btn?'true':'false');});}
+
+/* ---------- nav ---------- */
+(function(){var nav=document.getElementById('nav'), story=document.getElementById('story');
+function f(){nav.classList.toggle('solid', window.scrollY > story.offsetHeight-80);} window.addEventListener('scroll',f,{passive:true}); f();})();
+
+/* ---------- moon story ---------- */
+(function(){
+  var canvas=document.getElementById('moon'), story=document.getElementById('story'), stage=canvas.parentElement;
+  var steps=[].slice.call(document.querySelectorAll('#steps .step')), rail=document.getElementById('rail'), coords=document.getElementById('coords');
+  steps.forEach(function(s,i){var b=document.createElement('button'); b.type='button'; b.innerHTML='<span>'+s.dataset.label+'</span>'; b.setAttribute('aria-label','Go to '+s.dataset.label);
+    b.addEventListener('click',function(){window.scrollTo({top:story.offsetTop+s.offsetTop+(i?s.offsetHeight*0.35:0),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}); rail.appendChild(b);});
+  var railBtns=[].slice.call(rail.children);
+  if(!window.THREE){return;}
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
+  var scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(32,1,0.01,200);
+  var R=1.6;
+  var loader=new THREE.TextureLoader();
+  var map=loader.load('tex/moon.jpg',function(){ if(window.__moonFrame) requestAnimationFrame(window.__moonFrame); }); map.encoding=THREE.sRGBEncoding; map.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  var nmap=loader.load('tex/moon_n.jpg'); nmap.anisotropy=map.anisotropy;
+  var mat=new THREE.MeshStandardMaterial({map:map,normalMap:nmap,normalScale:new THREE.Vector2(1.6,1.6),roughness:1,metalness:0,color:0xffffff});
+  var moon=new THREE.Mesh(new THREE.SphereGeometry(R,192,128),mat);
+  var tilt=new THREE.Group(); tilt.add(moon); scene.add(tilt);
+  function ll(lat,lon,h){var u=(lon+180)/360, phi=u*Math.PI*2, th=(90-lat)*Math.PI/180, r=R*(h||1.002);
+    return new THREE.Vector3(-r*Math.cos(phi)*Math.sin(th), r*Math.cos(th), r*Math.sin(phi)*Math.sin(th));}
+  var sites={
+    base:ll(-89.5,-150,1.003), shack:ll(-89.67,129.78), gerl:ll(-88.5,-87.1), cab:ll(-85.3,-42.1)
+  };
+  var basePt=ll(-89.9,0); // indicative: the pole itself
+  sites.base=basePt;
+  var anchors={}; Object.keys(sites).forEach(function(k){var o=new THREE.Object3D(); o.position.copy(sites[k]); moon.add(o); anchors[k]=o;});
+  var pins={base:document.getElementById('pin-base'),shack:document.getElementById('pin-shack'),gerl:document.getElementById('pin-gerl'),cab:document.getElementById('pin-cab')};
+
+  var sun=new THREE.DirectionalLight(0xfff6ea,2.6); scene.add(sun);
+  scene.add(new THREE.AmbientLight(0x6f7c96,0.10));
+  var hemi=new THREE.HemisphereLight(0x9fb0d0,0x000000,0.06); scene.add(hemi);
+  // stars
+  var rr=(function(s){return function(){s=(s*16807)%2147483647;return (s-1)/2147483646;};})(11);
+  var sg=new THREE.BufferGeometry(), pts=[], cols=[];
+  for(var i=0;i<1800;i++){var th=rr()*Math.PI*2, ph=Math.acos(2*rr()-1), d=80; pts.push(d*Math.sin(ph)*Math.cos(th),d*Math.sin(ph)*Math.sin(th),d*Math.cos(ph)); var b=0.5+rr()*0.5; cols.push(b,b,b*1.05);}
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3)); sg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:0.18,vertexColors:true,transparent:true,opacity:.85,sizeAttenuation:true})));
+
+  var W=1,H=1, narrow=false;
+  function size(){W=stage.clientWidth; H=stage.clientHeight; renderer.setSize(W,H,false); camera.aspect=W/H; camera.updateProjectionMatrix(); narrow=W<760;}
+  window.addEventListener('resize',size); size();
+
+  function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+  function seg(p,a,b){var t=clamp((p-a)/(b-a),0,1); return t*t*(3-2*t);}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  var t0=performance.now(), spin=0, v=new THREE.Vector3(), camDir=new THREE.Vector3();
+  var target=new THREE.Vector3();
+  function progress(){var h=story.offsetHeight-stage.clientHeight; return clamp((window.scrollY-story.offsetTop)/Math.max(h,1),0,1);}
+  function frame(now){
+    var p=progress();
+    var a=seg(p,0.10,0.32), z=seg(p,0.34,0.56), z2=seg(p,0.64,0.86);
+    // near side slowly turning, then settle
+    if(!reduce) spin=(now-t0)*0.000035*(1-a);
+    moon.rotation.y=-Math.PI/2 + spin*(1-a) + lerp(0,0.9,a);
+    tilt.rotation.x=lerp(0.08,-Math.PI/2+0.42,a);
+    tilt.rotation.z=lerp(0.0,0.25,a);
+    // offset globe to the right on wide screens while full-disc
+    var off=narrow?0:lerp(0.95,0.55,a)*(1-z);
+    tilt.position.set(off, narrow?-0.35*(1-z):0, 0);
+    // camera: pull in toward the pole region
+    var poleW=new THREE.Vector3(); anchors.base.getWorldPosition(poleW);
+    target.set(off,narrow?-0.35*(1-z):0,0).lerp(poleW, z);
+    var dist=lerp(narrow?7.6:6.4, 1.55, z) - 0.3*z2;
+    camDir.set(0,0,1).lerp(poleW.clone().sub(tilt.position).normalize().add(new THREE.Vector3(0,-0.55,0.55)).normalize(), z).normalize();
+    camera.position.copy(target).addScaledVector(camDir,dist);
+    camera.lookAt(target.x, target.y + 0.02*z, target.z);
+    // light: gibbous on the full disc, grazing at the pole
+    var nP=poleW.clone().sub(tilt.position).normalize(), tg=new THREE.Vector3().crossVectors(nP,new THREE.Vector3(0,0,1)).normalize();
+    var el0=lerp(0.6,0.12,z), graze=tg.multiplyScalar(Math.cos(el0)).addScaledVector(nP,Math.sin(el0)).multiplyScalar(6);
+    sun.position.set(4,1.2,3.2).lerp(graze,a);
+    renderer.render(scene,camera);
+    // pins
+    var showBase=p<0.93 && p>0.06, showCr=z>0.6;
+    Object.keys(anchors).forEach(function(k){
+      anchors[k].getWorldPosition(v);
+      var n=v.clone().sub(tilt.position).normalize(); var toCam=camera.position.clone().sub(v).normalize();
+      var vis=n.dot(toCam)>0.05; v.project(camera);
+      var x=(v.x*.5+.5)*W, y=(-v.y*.5+.5)*H;
+      pins[k].style.transform='translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px)';
+      var on=vis && (k==='base'? (showBase && !showCr) : showCr) && x>0 && x<W-120 && y>40 && y<H-20;
+      pins[k].style.opacity=on?1:0;
+    });
+    var cur=Math.min(steps.length-1,Math.floor(p*steps.length*0.999));
+    railBtns.forEach(function(b,i){b.classList.toggle('on',i===cur);});
+    coords.textContent= z>0.5 ? 'SOUTH POLE · 85–90°S · FRAME HEIGHT ≈ '+(Math.round(2*dist*Math.tan(16*Math.PI/180)/R*1737/50)*50).toLocaleString('en-US')+' KM' : (a>0.5 ? 'SOUTH POLAR REGION · VIEW FROM BELOW' : 'NEAR SIDE');
+    if(!reduce) requestAnimationFrame(frame);
+  }
+  if(reduce){ window.addEventListener('scroll',function(){requestAnimationFrame(frame);},{passive:true}); window.addEventListener('resize',function(){requestAnimationFrame(frame);}); }
+  window.__moonFrame=frame;
+  requestAnimationFrame(frame);
+})();
+
+/* ---------- shared: osteomorphic block geometry ----------
+   After Dyskin, Estrin, Kanel-Belov & Pasternak (2003), Adv. Eng. Mater. 5(3):
+   top    z1(x,y) = Δh·φ(x)·φ(y) + h
+   bottom z2(x,y) = Δh·φ(x+a)·φ(y) − h
+   block 2a × a × 2h; φ even, 2a-periodic, φ(0)=1, φ(a)=−1, φ'(0)=φ'(a)=0.
+   φ = 2a⁻⁴(x²−a²)²−1 (polynomial, Dyskin 2003) or cos(πx/a) (sine/cosine type, Yong 2011).
+   Side faces are planar. The bottom is the top shifted by a, so courses nest in running bond. */
+var S_MM=0.01;
+var GRADE={
+  paver:{c:0x8f8c86,f:1.0,n:'Paver',onSide:true,rough:0.5},
+  structural:{c:0xC9492F,f:1.0,n:'Structural interlock',rough:0.62},
+  bulk:{c:0xb3ad9f,f:0.8,n:'Shielding bulk',rough:0.95},
+  rail:{c:0x3B5FC4,f:1.0,n:'Rail-seat',rough:0.55}
+};
+function phiF(t,a,type){ var u=((t+a)%(2*a)+2*a)%(2*a)-a; if(type==='cos') return Math.cos(Math.PI*u/a); var q=u*u-a*a; return 2*q*q/(a*a*a*a)-1; }
+function osteo(d){ // d: {a,h,dh,phi} in mm; returns scene-unit helpers
+  var s=S_MM, a=d.a, h=d.h, dh=Math.min(d.dh,h*0.9), off=h+dh;
+  return {L:2*a*s, W:a*s, H:(2*h+2*dh)*s, a:a*s, h:h*s, dh:dh*s,
+    top:function(X,Z){var x=X/s,y=Z/s; return (dh*phiF(x,a,d.phi)*phiF(y,a,d.phi)+h+off)*s;},
+    bot:function(X,Z){var x=X/s,y=Z/s; return (dh*phiF(x+a,a,d.phi)*phiF(y,a,d.phi)-h+off)*s;}};
+}
+function blockFeatures(d){
+  var a=d.a, h=d.h;
+  return { slot:{w:16,l:Math.min(56,a*0.5),d:Math.min(40,h*0.5)},
+    pockets:[[-a*0.55,0],[a*0.55,0]], pocket:Math.min(22,a*0.22), pocketD:Math.min(30,h*0.4),
+    handle:{h:Math.min(28,h*0.36),len:a*1.0}, pocketF:{len:a*1.24,h:Math.min(56,h*0.75),d:Math.min(24,a*0.24)},
+    seat:{w:Math.min(50,a*0.5)} };
+}
+function blockVolume(d,iface,grade){ // exact: the wave terms integrate to zero over a full period
+  var F=blockFeatures(d), V=2*d.a*d.a*2*d.h;
+  if(iface==='1'){ V-=F.pocketF.len*F.pocketF.h*F.pocketF.d; V+=F.handle.len*F.handle.h*F.pocketF.d*0.7; }
+  if(iface==='2'){ V-=F.slot.w*F.slot.l*F.slot.d + F.slot.l*Math.min(56,d.a*0.6)*14; }
+  if(iface==='3'){ V-=2*F.pocket*F.pocket*F.pocketD; }
+  return V/1000;
+}
+function makeBlock(THREE,d,iface,grade,opts){
+  opts=opts||{};
+  var s=S_MM, g=new THREE.Group(), core=new THREE.Group(); g.add(core);
+  var O=osteo(d), F=blockFeatures(d), GR=GRADE[grade], L=O.L, W=O.W, a=O.a;
+  var body=new THREE.MeshStandardMaterial({color:new THREE.Color(opts.color||GR.c).convertSRGBToLinear(),envMapIntensity:0.3,roughness:GR.rough,metalness:0,side:THREE.DoubleSide,transparent:!!opts.ghost,opacity:opts.ghost?0.16:1,depthWrite:!opts.ghost});
+  var dark=new THREE.MeshStandardMaterial({color:0x07080b,roughness:1,side:THREE.DoubleSide});
+  var edgeM=new THREE.LineBasicMaterial({color:opts.ghost?0x9aa4b5:0x14161b,transparent:true,opacity:opts.ghost?0.45:0.45});
+  var NX=56, NZ=28;
+  function surf(fn,flip){ var pos=[],idx=[];
+    for(var j=0;j<=NZ;j++)for(var i=0;i<=NX;i++){var X=-L/2+L*i/NX, Z=-W/2+W*j/NZ; pos.push(X,fn(X,Z),Z);}
+    for(j=0;j<NZ;j++)for(i=0;i<NX;i++){var p=j*(NX+1)+i,q=p+1,r=p+NX+1,t=r+1; if(flip) idx.push(p,q,r,q,t,r); else idx.push(p,r,q,q,r,t);}
+    var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); geo.computeVertexNormals(); return geo; }
+  function wall(axis,val,n){ var pos=[],idx=[],line=[];
+    for(var i=0;i<=n;i++){ var u=(axis==='z'? -L/2+L*i/n : -W/2+W*i/n); var X=axis==='z'?u:val, Z=axis==='z'?val:u;
+      pos.push(X,O.bot(X,Z),Z, X,O.top(X,Z),Z); }
+    for(i=0;i<n;i++){var p=2*i; idx.push(p,p+2,p+1,p+1,p+2,p+3);}
+    var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setIndex(idx); geo.computeVertexNormals(); return geo; }
+  core.add(new THREE.Mesh(surf(O.top,false),body)); core.add(new THREE.Mesh(surf(O.bot,true),body));
+  [['z',W/2,NX],['z',-W/2,NX],['x',L/2,NZ],['x',-L/2,NZ]].forEach(function(w){core.add(new THREE.Mesh(wall(w[0],w[1],w[2]),body));});
+  if(!opts.noEdges){ // outline: the four curved rims and the vertical corners
+    function rim(fn){ var pts=[]; var n=NX; for(var i=0;i<=n;i++){var X=-L/2+L*i/n; pts.push(new THREE.Vector3(X,fn(X,-W/2),-W/2));}
+      for(i=0;i<=NZ;i++){var Z=-W/2+W*i/NZ; pts.push(new THREE.Vector3(L/2,fn(L/2,Z),Z));}
+      for(i=n;i>=0;i--){X=-L/2+L*i/n; pts.push(new THREE.Vector3(X,fn(X,W/2),W/2));}
+      for(i=NZ;i>=0;i--){Z=-W/2+W*i/NZ; pts.push(new THREE.Vector3(-L/2,fn(-L/2,Z),Z));}
+      core.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),edgeM)); }
+    rim(O.top); rim(O.bot);
+    [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(function(c){var X=c[0]*L/2,Z=c[1]*W/2; core.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(X,O.bot(X,Z),Z),new THREE.Vector3(X,O.top(X,Z),Z)]),edgeM));});
+  }
+  if(!opts.ghost){
+    var e=0.7*s, onSide=GR.onSide;
+    function patch(x0,z0,w,dd,mat){ // conforms to the curved top
+      var geo=new THREE.PlaneGeometry(w,dd,8,8); geo.rotateX(-Math.PI/2); var p=geo.attributes.position;
+      for(var i=0;i<p.count;i++){var X=p.getX(i)+x0,Z=p.getZ(i)+z0; p.setXYZ(i,X,O.top(X,Z)+e,Z);} geo.computeVertexNormals(); var m=new THREE.Mesh(geo,mat); core.add(m); return m; }
+    function sidePatch(x0,y0,w,hh,mat,zsign){ var m=new THREE.Mesh(new THREE.PlaneGeometry(w,hh),mat); m.position.set(x0,y0,zsign*(W/2+e)); if(zsign<0) m.rotation.y=Math.PI; core.add(m); return m; }
+    var midY=O.h+O.dh; // the flat mid-plane of the block (z = 0)
+    if(!onSide){
+      if(iface==='1'){ sidePatch(0,midY,F.pocketF.len*s,F.pocketF.h*s,dark,1); var hb=new THREE.Mesh(new THREE.BoxGeometry(F.handle.len*s,F.handle.h*s,2*s),body); hb.position.set(0,midY,W/2-1.2*s); core.add(hb); }
+      if(iface==='2') patch(grade==='rail'?-a*0.55:0,0,F.slot.w*s,F.slot.l*s,dark);
+      if(iface==='3') F.pockets.forEach(function(p){patch(p[0]*s,p[1]*s,F.pocket*s,F.pocket*s,dark);});
+      if(grade==='rail'){ var tY=O.top(0,0); var sb=new THREE.Mesh(new THREE.BoxGeometry(F.seat.w*s,0.1,W*0.98),new THREE.MeshStandardMaterial({color:0xb4bac2,metalness:0.9,roughness:0.3})); sb.position.set(0,tY-0.02,0); core.add(sb); }
+    } else { // paver: laid on its side, the planar face becomes the sintered surface
+      if(iface==='1'){ var ep=new THREE.Mesh(new THREE.PlaneGeometry(W*0.7,O.h*1.1),dark); ep.position.set(L/2+e,midY,0); ep.rotation.y=Math.PI/2; core.add(ep); }
+      if(iface==='2') sidePatch(0,midY,F.slot.l*s,F.slot.w*s,dark,1);
+      if(iface==='3') F.pockets.forEach(function(p){sidePatch(p[0]*s,midY,F.pocket*s,F.pocket*s,dark,1);});
+    }
+    if(opts.fid){ var fs=Math.min(W,O.h*2)*0.3;
+      if(!onSide) patch(-a*0.55,-W*0.22,fs,fs,new THREE.MeshBasicMaterial({map:opts.fid,side:THREE.DoubleSide})).position.y+=0;
+      sidePatch(-a*0.6,midY+(onSide?O.h*0.35:0),fs,fs,new THREE.MeshBasicMaterial({map:opts.fid}),1);
+    }
+  }
+  if(GR.onSide){ core.rotation.x=-Math.PI/2; core.position.y=W/2; core.position.z=(O.h+O.dh); }
+  return g;
+}
+function fiducialTexture(THREE){var c=document.createElement('canvas'); c.width=c.height=64; var g=c.getContext('2d'); g.fillStyle='#111'; g.fillRect(0,0,64,64); g.fillStyle='#f4f2ed';
+  var bits=[[1,0,1,1],[0,1,1,0],[1,1,0,1],[0,1,0,0]]; for(var y=0;y<4;y++)for(var x=0;x<4;x++) if(bits[y][x]) g.fillRect(16+x*8,16+y*8,8,8);
+  var t=new THREE.CanvasTexture(c); t.magFilter=THREE.NearestFilter; return t;}
+function studioEnv(THREE,renderer){
+  var pm=new THREE.PMREMGenerator(renderer), es=new THREE.Scene();
+  es.add(new THREE.Mesh(new THREE.BoxGeometry(20,12,20),new THREE.MeshBasicMaterial({color:0x2a2f3a,side:THREE.BackSide})));
+  function panel(w,h,x,y,z,ry,rx,c){var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c||0xffffff,side:THREE.DoubleSide})); m.position.set(x,y,z); m.rotation.set(rx||0,ry||0,0); es.add(m);}
+  panel(8,3,0,5.8,0,0,Math.PI/2); panel(4,6,-9.8,1,2,Math.PI/2,0,0xdfe6f2); panel(3,5,9.8,0,-3,-Math.PI/2,0,0xa8b4c8); panel(10,1.2,0,-2,-9.8,0,0,0x8090a8);
+  var tex=pm.fromScene(es,0.035).texture; pm.dispose(); return tex;
+}
+function pressedSel(seg,btn,attr){seg.querySelectorAll('button['+attr+']').forEach(function(b){b.setAttribute('aria-pressed',b===btn?'true':'false');});}
+
+/* ---------- block explorer ---------- */
+(function(){
+  var st={grade:'structural',mat:'pla',infill:25,rho:2.0,a:100,h:75,dh:30,phi:'poly',course:false, custom:null};
+  var $=function(id){return document.getElementById(id);};
+  var sL=$('dL'),sH=$('dH'),sD=$('dD'),sM=$('dM');
+  function setDims(){var big=st.grade==='bulk'; st.a=big?130:100; st.h=big?95:75; st.dh=big?24:30; sL.value=2*st.a; sH.value=2*st.h; sD.value=st.dh;}
+  setDims();
+  function matUI(){ if(st.mat==='pla'){$('dMlab').textContent='Infill'; sM.min=10; sM.max=100; sM.step=5; sM.value=st.infill;} else {$('dMlab').textContent='Density'; sM.min=15; sM.max=26; sM.step=1; sM.value=Math.round(st.rho*10);} }
+  matUI();
+  function effDensity(){ if(st.mat==='pla') return 1.24*(0.12+0.88*st.infill/100); return st.rho*GRADE[st.grade].f; }
+  function fmt(x,d){return x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+  function chip(el,cls,txt){el.className='chip '+cls; el.textContent=txt;}
+  var IFN={'1':'flush side handle','2':'top twist-lock','3':'top pocket grip'};
+  function volume(){ return st.custom? st.custom.vol : blockVolume(st,State.iface,st.grade); }
+  function update(){
+    st.dh=Math.min(st.dh,Math.round(st.h*0.9)); $('oD').textContent=st.dh+' mm'; $('oL').textContent=2*st.a+' mm'; $('oH').textContent=2*st.h+' mm'; $('dimNote').textContent='Block 2a × a × 2h = '+2*st.a+' × '+st.a+' × '+2*st.h+' mm · Δh/h = '+(st.dh/st.h).toFixed(2);
+    $('oM').textContent= st.mat==='pla' ? st.infill+' %' : fmt(st.rho,1)+' g/cm³';
+    var V=volume(), m=V*effDensity()/1000;
+    $('mass').innerHTML=fmt(m,m<10?2:1)+'<small>kg</small>';
+    $('weights').innerHTML='Earth '+fmt(m*9.81,1)+' N<br>Moon '+fmt(m*1.62,1)+' N<br>Volume '+fmt(V/1000,2)+' L';
+    var labOn=st.mat==='pla', lunOn=!labOn;
+    function gauge(n,lim,on,cap){var f=$('f'+n), l=$('l'+n), scale=lim*2; f.style.width=Math.min(100,m/scale*100)+'%'; l.style.left=(lim/scale*100)+'%'; f.style.background=on?(m<=lim?cssVar('--s3'):cssVar('--red')):cssVar('--faint'); chip($('c'+n), !on?'na':(m<=lim?'ok':'over'), !on?'n/a · '+cap:(m<=lim?'Within limit':'Over limit'));}
+    gauge(1,2,labOn,'regolith'); gauge(2,12,lunOn,'PLA');
+    var per=Math.floor(30/m); chip($('c3'), lunOn?(per>=1?'ok':'over'):'na', lunOn? (per>=1? per+' per trip':'Too heavy'):'n/a · PLA');
+    $('blkTag').textContent=(st.custom?st.custom.name+' · ':'')+GRADE[st.grade].n+(st.custom?'':' · interface '+State.iface+' '+IFN[State.iface])+(st.course&&!st.custom?' · two courses':'');
+    build();
+  }
+  $('mSeg').addEventListener('click',function(e){var b=e.target.closest('button'); if(!b)return; pressedSel(this,b,'data-m'); st.mat=b.dataset.m; matUI(); update();});
+  $('gradeSel').addEventListener('change',function(){st.grade=this.value; st.custom=null; setDims(); update();});
+  $('courseBtn').addEventListener('click',function(){st.course=!st.course; this.setAttribute('aria-pressed',st.course?'true':'false'); this.textContent=st.course?'Show one block':'Show two courses'; update();});
+  $('ifSel').addEventListener('change',function(){setIface(this.value);});
+  onIface(function(v){$('ifSel').value=v; update();});
+  sL.addEventListener('input',function(){st.a=this.value/2; st.custom=null; update();}); sH.addEventListener('input',function(){st.h=this.value/2; st.custom=null; update();}); sD.addEventListener('input',function(){st.dh=+this.value; st.custom=null; update();});
+  $('phiSel').addEventListener('change',function(){st.phi=this.value; update();});
+  sM.addEventListener('input',function(){ if(st.mat==='pla') st.infill=+this.value; else st.rho=this.value/10; update();});
+
+  var canvas=$('blk'), holder=canvas.parentElement, ok=!!window.THREE, renderer, scene, camera, controls, grp, fid;
+  if(ok){
+    renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+    renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    scene=new THREE.Scene(); scene.environment=studioEnv(THREE,renderer);
+    camera=new THREE.PerspectiveCamera(30,1,0.1,100); camera.position.set(5.2,4.2,6.4);
+    scene.add(new THREE.HemisphereLight(0xdfe6f2,0x1a1e26,0.35));
+    var dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(6,7,3); scene.add(dl); var dl3=new THREE.DirectionalLight(0x9fb4ff,0.35); dl3.position.set(-5,2,-4); scene.add(dl3);
+    var grid=new THREE.GridHelper(10,20,0x3a4252,0x222833); grid.position.y=-0.001; scene.add(grid);
+    if(THREE.OrbitControls){controls=new THREE.OrbitControls(camera,canvas); controls.enableDamping=true; controls.enablePan=false; controls.minDistance=2.5; controls.maxDistance=16; controls.autoRotate=!matchMedia('(prefers-reduced-motion: reduce)').matches; controls.autoRotateSpeed=0.7;
+      canvas.addEventListener('pointerdown',function(){controls.autoRotate=false;});}
+    grp=new THREE.Group(); scene.add(grp); fid=fiducialTexture(THREE);
+    function rs(){var w=holder.clientWidth,h=holder.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+    new ResizeObserver(rs).observe(holder); rs();
+    (function loop(){ if(controls) controls.update(); renderer.render(scene,camera); requestAnimationFrame(loop);})();
+  }
+  function build(){
+    if(!ok) return;
+    while(grp.children.length){grp.remove(grp.children[0]);}
+    if(st.custom){ var m=new THREE.Mesh(st.custom.geo,new THREE.MeshStandardMaterial({color:new THREE.Color(GRADE[st.grade].c).convertSRGBToLinear(),envMapIntensity:0.3,roughness:0.62})); grp.add(m);
+      grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(st.custom.geo,30),new THREE.LineBasicMaterial({color:0x14161b,transparent:true,opacity:.4})));
+      fit(Math.max(st.custom.h,1.5),st.custom.h/2); return; }
+    var O=osteo(st);
+    if(!st.course){ grp.add(makeBlock(THREE,st,State.iface,st.grade,{fid:fid})); fit(Math.max(O.L,O.H), (GRADE[st.grade].onSide?O.W:O.H)*0.5); return; }
+    var alt=st.grade==='structural'?0x9a3322:(st.grade==='rail'?0x2a4596:(st.grade==='bulk'?0x8f897c:0x6f6c66));
+    if(GRADE[st.grade].onSide){ // paver plate: curved faces interlock sideways, rows shifted by a
+      for(var r=0;r<3;r++) for(var c=-1;c<=1;c++){ var b=makeBlock(THREE,st,State.iface,st.grade,{fid:fid,color:(r+c)%2?alt:null}); b.position.set(c*O.L+(r%2)*O.a,0,-(r-1)*2*O.h); grp.add(b); }
+      fit(3*O.L, O.W*0.5); return; }
+    // running bond: the upper course is shifted by a and sits 2h higher, so its bottom surface replicates the top below
+    [-1,0,1].forEach(function(c){ var b=makeBlock(THREE,st,State.iface,st.grade,{fid:fid}); b.position.set(c*O.L,0,0); grp.add(b); });
+    [-0.5,0.5].forEach(function(c){ var b=makeBlock(THREE,st,State.iface,st.grade,{fid:fid,color:alt}); b.position.set(c*O.L,2*O.h,0); grp.add(b); });
+    fit(3*O.L, O.H*0.9);
+  }
+  var lastFit='';
+  function fit(size,ty){ var key=size.toFixed(2)+'|'+ty.toFixed(2); if(!controls||key===lastFit) return; lastFit=key; controls.target.set(0,ty,0);
+    var dir=new THREE.Vector3(0.62,0.42,0.66).normalize(); camera.position.copy(controls.target).addScaledVector(dir,size*2.9+1.2); }
+  // load the user's own model (STL or GLB, millimetres)
+  function meshVolume(geo){ var p=geo.attributes.position, idx=geo.index, v=0, a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+    var n=idx?idx.count:p.count; for(var i=0;i<n;i+=3){ var i0=idx?idx.getX(i):i, i1=idx?idx.getX(i+1):i+1, i2=idx?idx.getX(i+2):i+2;
+      a.fromBufferAttribute(p,i0); b.fromBufferAttribute(p,i1); c.fromBufferAttribute(p,i2); v+=a.dot(b.clone().cross(c))/6; } return Math.abs(v); }
+  function useGeometry(geo,name){
+    geo.computeBoundingBox(); var bb=geo.boundingBox, size=new THREE.Vector3(); bb.getSize(size);
+    var zUp=size.z>size.y*1.05 && /stl$/i.test(name); if(zUp){ geo.rotateX(-Math.PI/2); geo.computeBoundingBox(); bb=geo.boundingBox; bb.getSize(size); }
+    var vol=meshVolume(geo)/1000; // mm3 -> cm3
+    var ctr=new THREE.Vector3(); bb.getCenter(ctr); geo.translate(-ctr.x,-bb.min.y,-ctr.z); geo.scale(S_MM,S_MM,S_MM); geo.computeVertexNormals();
+    st.custom={geo:geo,vol:vol,name:name.replace(/\.(stl|glb)$/i,''),h:size.y*S_MM};
+    $('modelNote').textContent='Loaded '+name+' · '+Math.round(size.x)+' × '+Math.round(size.z)+' × '+Math.round(size.y)+' mm · '+(vol/1000).toFixed(2)+' L. Move a slider to return to the osteomorphic model.';
+    $('blkHint').textContent='Drag to orbit · your model';
+    update();
+  }
+  $('modelIn').addEventListener('change',function(){ var f=this.files[0]; if(!f||!ok) return; var rd=new FileReader();
+    rd.onload=function(){ try{
+      if(/\.stl$/i.test(f.name)){ if(!THREE.STLLoader) throw new Error('STL reader not loaded'); useGeometry(new THREE.STLLoader().parse(rd.result),f.name); }
+      else { if(!THREE.GLTFLoader) throw new Error('GLB reader not loaded');
+        new THREE.GLTFLoader().parse(rd.result,'',function(gl){ var geos=[]; gl.scene.updateMatrixWorld(true);
+          gl.scene.traverse(function(o){ if(o.isMesh){ var g2=o.geometry.clone(); g2.applyMatrix4(o.matrixWorld); geos.push(g2.index?g2.toNonIndexed():g2);} });
+          if(!geos.length) throw new Error('no meshes in file');
+          var tot=0; geos.forEach(function(g2){tot+=g2.attributes.position.count;}); var arr=new Float32Array(tot*3), o=0;
+          geos.forEach(function(g2){arr.set(g2.attributes.position.array,o); o+=g2.attributes.position.array.length;});
+          var merged=new THREE.BufferGeometry(); merged.setAttribute('position',new THREE.BufferAttribute(arr,3)); useGeometry(merged,f.name); },
+          function(err){ $('modelNote').textContent='Could not read '+f.name+': '+(err&&err.message||'unknown error'); }); }
+    }catch(err){ $('modelNote').textContent='Could not read '+f.name+': '+err.message+'. Export as binary STL or GLB in millimetres.'; } };
+    rd.readAsArrayBuffer(f); this.value=''; });
+  update();
+})();
+
+/* ---------- end-effector bay ---------- */
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var canvas=$('grip'), holder=canvas.parentElement, opt='2', target=0, phase=0, timer=null;
+  var PH=['1 · APPROACH','2 · ENGAGE','3 · ACTUATE','4 · LIFT'];
+  var TAG={'1':'Option 1 · flush side handle + C-jaw','2':'Option 2 · top twist-lock','3':'Option 3 · top pocket grip'};
+  var seg=$('seqSeg'), btns=[].slice.call(seg.querySelectorAll('button[data-s]')), play=$('seqPlay'), list=$('optList');
+  function setStep(i){target=i; btns.forEach(function(b){b.setAttribute('aria-pressed',+b.dataset.s===i?'true':'false');}); $('gripPhase').textContent=PH[i];}
+  seg.addEventListener('click',function(e){var b=e.target.closest('button[data-s]'); if(!b)return; stop(); setStep(+b.dataset.s);});
+  function stop(){clearInterval(timer); timer=null; play.textContent='▶ Play';}
+  play.addEventListener('click',function(){ if(timer){stop();return;} play.textContent='❚❚ Pause'; setStep((target+1)%4); timer=setInterval(function(){setStep((target+1)%4);},1600);});
+  list.addEventListener('click',function(e){var b=e.target.closest('.opt'); if(!b)return; setIface(b.dataset.o);});
+  onIface(function(v){ opt=v; [].forEach.call(list.children,function(b){b.setAttribute('aria-pressed',b.dataset.o===v?'true':'false');}); $('gripTag').textContent=TAG[v]; phase=0; setStep(0); build(); });
+  // Grasshopper switch lives here too
+  var gh=$('ghSel'), note=$('famNote'), nt={1:'Every member gets a flush side handle',2:'Every member gets a top slot and cavity',3:'Every member gets two top pockets'};
+  gh.addEventListener('change',function(){setIface(this.value);});
+  onIface(function(v){ gh.value=v; note.textContent=nt[v]; }); note.textContent=nt[gh.value];
+  if(!window.THREE) return;
+
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+  var scene=new THREE.Scene(); scene.environment=studioEnv(THREE,renderer);
+  var camera=new THREE.PerspectiveCamera(30,1,0.1,100); camera.position.set(6.6,6.0,9.4);
+  var key=new THREE.DirectionalLight(0xffffff,1.6); key.position.set(6,8,3); scene.add(key); var rim=new THREE.DirectionalLight(0x9fb4ff,0.35); rim.position.set(-5,3,-5); scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0xdfe6f2,0x14171d,0.25));
+  var grid=new THREE.GridHelper(12,24,0x3a4252,0x20252f); scene.add(grid);
+  var controls=THREE.OrbitControls? new THREE.OrbitControls(camera,canvas):null;
+  if(controls){controls.enableDamping=true; controls.enablePan=false; controls.minDistance=3; controls.maxDistance=18; controls.target.set(0,2.7,0);}
+  function rs(){var w=holder.clientWidth,h=holder.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+  new ResizeObserver(rs).observe(holder); rs();
+
+  var steel=new THREE.MeshStandardMaterial({color:0xb4bac2,metalness:0.92,roughness:0.3});
+  var satin=new THREE.MeshStandardMaterial({color:0x9ca3ad,metalness:0.85,roughness:0.45});
+  var anod=new THREE.MeshStandardMaterial({color:0x262a31,metalness:0.55,roughness:0.42});
+  var bolt=new THREE.MeshStandardMaterial({color:0x0e1014,metalness:0.6,roughness:0.35});
+  var pad=new THREE.MeshStandardMaterial({color:0x15171b,metalness:0,roughness:0.9});
+  var d={a:100,h:75,dh:30,phi:'poly'}, F=blockFeatures(d), s=S_MM, O=osteo(d), H=O.H, W=O.W, L=O.L, Y0=2*O.h;
+  var root=new THREE.Group(); scene.add(root);
+  var blk, tool, parts={};
+  function mesh(geo,mat,x,y,z,parent){var m=new THREE.Mesh(geo,mat); m.position.set(x||0,y||0,z||0); (parent||tool).add(m); return m;}
+  function flange(parent,axis,r,t,n){ // mounting flange with socket-head bolts, like an ISO 9409 tool flange
+    var gF=new THREE.Group(); parent.add(gF);
+    mesh(new THREE.CylinderGeometry(r,r,t,64),satin,0,0,0,gF);
+    mesh(new THREE.CylinderGeometry(r*0.55,r*0.55,t*0.25,64),steel,0,t*0.62,0,gF);
+    mesh(new THREE.CylinderGeometry(r*0.08,r*0.08,t*0.3,16),bolt,0,t*0.78,0,gF);
+    for(var i=0;i<n;i++){var a=i/n*Math.PI*2; mesh(new THREE.CylinderGeometry(r*0.085,r*0.085,t*0.22,20),bolt,Math.cos(a)*r*0.76,t*0.55,Math.sin(a)*r*0.76,gF);}
+    if(axis==='z') gF.rotation.x=Math.PI/2;
+    return gF;
+  }
+  function screws(parent,pts,r,axis){pts.forEach(function(p){var m=mesh(new THREE.CylinderGeometry(r,r,0.03,18),bolt,p[0],p[1],p[2],parent); if(axis==='z') m.rotation.x=Math.PI/2; if(axis==='x') m.rotation.z=Math.PI/2;});}
+
+  function build(){
+    while(root.children.length) root.remove(root.children[0]);
+    blk=new THREE.Group(); root.add(blk);
+    blk.add(makeBlock(THREE,d,opt,'structural',{})); blk.position.y=Y0;
+    // course below (solid) and neighbours in the same course (ghost): all nest by shape
+    [-1.5,-0.5,0.5,1.5].forEach(function(k){var n=makeBlock(THREE,d,opt,'structural',{color:0x4a4f58}); n.position.x=k*L; root.add(n);});
+    [-1,1].forEach(function(k){var n=makeBlock(THREE,d,opt,'structural',{ghost:true}); n.position.set(k*L,Y0,0); root.add(n);});
+    tool=new THREE.Group(); root.add(tool); parts={};
+    if(opt==='1'){
+      // C-jaw parallel gripper, approaching the front face horizontally
+      var yb=Y0+O.h+O.dh, zf=W/2;
+      var base=new THREE.Group(); tool.add(base); parts.base=base;
+      mesh(new THREE.BoxGeometry(1.5,1.05,0.5),satin,0,0,0.25,base);
+      mesh(new THREE.BoxGeometry(1.52,0.12,0.52),anod,0,0.3,0.25,base); mesh(new THREE.BoxGeometry(1.52,0.12,0.52),anod,0,-0.3,0.25,base);
+      screws(base,[[-0.6,0.42,0.51],[0.6,0.42,0.51],[-0.6,-0.42,0.51],[0.6,-0.42,0.51]],0.045,'z');
+      var fl=flange(base,'z',0.5,0.16,8); fl.position.z=0.6;
+      mesh(new THREE.CylinderGeometry(0.34,0.38,0.5,48),anod,0,0,0.95,base).rotation.x=Math.PI/2;
+      ['up','lo'].forEach(function(k){ var sg=k==='up'?1:-1, J=new THREE.Group(); base.add(J); parts[k]=J;
+        mesh(new THREE.BoxGeometry(1.12,0.11,0.62),steel,0,0,-0.31,J);           // finger
+        mesh(new THREE.BoxGeometry(1.12,0.13,0.08),steel,0,-sg*0.12,-0.58,J);    // hook lip
+        mesh(new THREE.BoxGeometry(1.0,0.018,0.4),pad,0,-sg*0.064,-0.3,J);       // grip pad
+        mesh(new THREE.BoxGeometry(0.3,0.26,0.3),anod,0,sg*0.1,0.02,J);          // carriage
+        screws(J,[[-0.4,sg*0.06,-0.15],[0.4,sg*0.06,-0.15]],0.035);
+      });
+      parts.anim=function(p){ // p 0..3 continuous
+        var eng=Math.min(1,p), act=Math.max(0,Math.min(1,p-1)), lift=Math.max(0,Math.min(1,p-2))*0.55;
+        base.position.set(0,yb+lift,zf+0.03+ (1-eng)*1.4 );
+        var open=0.24-0.07*act; parts.up.position.y=open; parts.lo.position.y=-open;
+        blk.position.y=Y0+lift; };
+    }
+    if(opt==='2'){
+      // rotary T-key: flange, rotary actuator, shaft, key
+      var top=new THREE.Group(); tool.add(top); parts.top=top;
+      flange(top,'y',0.5,0.14,8).position.y=1.55;
+      mesh(new THREE.CylinderGeometry(0.36,0.36,0.62,64),anod,0,1.15,0,top);
+      mesh(new THREE.CylinderGeometry(0.38,0.38,0.06,64),satin,0,1.44,0,top); mesh(new THREE.CylinderGeometry(0.38,0.38,0.06,64),satin,0,0.86,0,top);
+      mesh(new THREE.BoxGeometry(0.16,0.2,0.16),satin,0.42,1.2,0,top); screws(top,[[0.5,1.25,0.05],[0.5,1.13,0.05]],0.03,'x');
+      var rot=new THREE.Group(); top.add(rot); parts.rot=rot;
+      mesh(new THREE.CylinderGeometry(0.2,0.2,0.1,48),steel,0,0.8,0,rot);
+      mesh(new THREE.CylinderGeometry(0.065,0.065,0.9,32),steel,0,0.33,0,rot);
+      mesh(new THREE.BoxGeometry(0.12,0.1,0.48),steel,0,-0.12,0,rot);          // key crossbar, starts along the slot (z)
+      mesh(new THREE.CylinderGeometry(0.03,0.03,0.2,12),bolt,0,0.55,0.07,rot);   // index mark
+      parts.anim=function(p){ var eng=Math.min(1,p), act=Math.max(0,Math.min(1,p-1)), lift=Math.max(0,Math.min(1,p-2))*0.55;
+        var down=Y0+O.top(0,0)-0.2; top.position.set(0, down+(1-eng)*1.6+lift, 0); rot.rotation.y=act*Math.PI/2; blk.position.y=Y0+lift; };
+    }
+    if(opt==='3'){
+      // two-finger spreader on a linear slide, set on the free top diagonal
+      var ang=Math.atan2(F.pockets[0][1],F.pockets[0][0]), r0=Math.hypot(F.pockets[0][0],F.pockets[0][1])*s;
+      var top3=new THREE.Group(); tool.add(top3); parts.top=top3;
+      var ax=new THREE.Group(); ax.rotation.y=-ang; top3.add(ax);
+      flange(top3,'y',0.45,0.14,8).position.y=1.45;
+      mesh(new THREE.CylinderGeometry(0.3,0.3,0.4,48),anod,0,1.15,0,top3);
+      mesh(new THREE.BoxGeometry(1.5,0.22,0.36),satin,0,0.85,0,ax);               // slide body
+      mesh(new THREE.BoxGeometry(1.5,0.05,0.12),anod,0,0.735,0,ax);                // rail
+      screws(ax,[[-0.62,0.85,0.185],[0.62,0.85,0.185],[-0.2,0.85,0.185],[0.2,0.85,0.185]],0.03,'z');
+      ['a','b'].forEach(function(k){ var sg=k==='a'?-1:1, C=new THREE.Group(); ax.add(C); parts[k]=C;
+        mesh(new THREE.BoxGeometry(0.34,0.2,0.4),anod,0,0.62,0,C);
+        mesh(new THREE.BoxGeometry(0.16,0.72,0.16),steel,0,0.2,0,C);              // finger
+        mesh(new THREE.BoxGeometry(0.02,0.3,0.14),pad,sg*0.09,-0.02,0,C);          // outer pad
+        screws(C,[[0,0.62,0.205]],0.03,'z'); });
+      parts.anim=function(p){ var eng=Math.min(1,p), act=Math.max(0,Math.min(1,p-1)), lift=Math.max(0,Math.min(1,p-2))*0.55;
+        top3.position.set(0, Y0+O.top(F.pockets[1][0]*s,0)-0.14+(1-eng)*1.6+lift, 0);
+        var r=r0-0.03+0.06*act; parts.a.position.x=-r; parts.b.position.x=r; blk.position.y=Y0+lift; };
+    }
+    parts.anim(phase);
+  }
+  build();
+  (function loop(){
+    phase+= (target-phase)*0.08; if(Math.abs(target-phase)<0.001) phase=target;
+    if(parts.anim) parts.anim(phase);
+    if(controls) controls.update(); renderer.render(scene,camera); requestAnimationFrame(loop);
+  })();
+})();
+
+/* ---------- simulation dashboard ---------- */
+(function(){
+  var OPT=[{id:1,n:'1 · Side handle',c:'--s1'},{id:2,n:'2 · Twist-lock',c:'--s2'},{id:3,n:'3 · Pocket grip',c:'--s3'}];
+  var MEM=['plate','column','wall','arch'], CONDS=['nominal','dust','lunar'];
+  var data=[], loaded=null, cond='nominal', mem='all';
+  function rng(s){return function(){s=(s*16807)%2147483647;return (s-1)/2147483646;};}
+  function illustrative(){
+    var r=rng(42), out=[];
+    var c50={1:11,2:8,3:13}, dust={1:-1.5,2:-3,3:-5}, lun={1:0.8,2:0.6,3:0.8}, err={1:1.8,2:0.9,3:1.4};
+    OPT.forEach(function(o){ MEM.forEach(function(m){ CONDS.forEach(function(c){
+      for(var off=0;off<=20;off+=2){ for(var t=0;t<12;t++){
+        var mid=c50[o.id]+(c==='dust'?dust[o.id]:0)+(c==='lunar'?lun[o.id]:0)+(o.id===1&&m==='plate'?-2:0);
+        var p=1/(1+Math.exp((off-mid)/1.4)); var ok=r()<p?1:0;
+        var e=Math.abs(err[o.id]*(0.5+r())+off*0.04+(c==='dust'?0.5:0)+(r()-0.5)*0.6);
+        out.push({option:o.id,member:m,condition:c,offset:off,success:ok,err:ok?e:null});
+      }}
+    });});});
+    return out;
+  }
+  data=illustrative();
+  var $=function(id){return document.getElementById(id);};
+  function filt(){return data.filter(function(d){return d.condition===cond && (mem==='all'||d.member===mem);});}
+  function median(a){if(!a.length)return null; a=a.slice().sort(function(x,y){return x-y;}); var m=Math.floor(a.length/2); return a.length%2?a[m]:(a[m-1]+a[m])/2;}
+  function stats(rows){
+    return OPT.map(function(o){
+      var rs=rows.filter(function(d){return d.option===o.id;});
+      var offs={}; rs.forEach(function(d){(offs[d.offset]=offs[d.offset]||[]).push(d.success);});
+      var curve=Object.keys(offs).map(Number).sort(function(a,b){return a-b;}).map(function(k){var a=offs[k]; return {x:k,y:100*a.reduce(function(s,v){return s+v;},0)/a.length,n:a.length};});
+      var cap=null; for(var i=0;i<curve.length;i++){ if(curve[i].y>=90) cap=curve[i].x; else break; }
+      var errs=rs.filter(function(d){return d.success&&d.err!=null;}).map(function(d){return d.err;});
+      return {o:o,curve:curve,cap:cap,med:median(errs),errs:errs,s0:curve.length?curve[0].y:null,n:rs.length};
+    });
+  }
+  function f1(x){return x==null?'–':x.toFixed(1);}
+  var S=[];
+  function render(){
+    S=stats(filt());
+    $('tiles').innerHTML=S.map(function(s){return '<div class="tile"><div class="nm"><i style="background:var('+s.o.c+')"></i>Option '+s.o.n+'</div><div class="vals">'+
+      '<div><b>'+(s.cap==null?'–':s.cap+' mm')+'</b><span>capture range (≥90% seat)</span></div><div><b>'+f1(s.med)+' mm</b><span>median placement error</span></div><div><b>'+(s.s0==null?'–':Math.round(s.s0)+'%')+'</b><span>success, aligned start</span></div></div></div>';}).join('');
+    lineChart(); strip(); table();
+  }
+  // line chart
+  var A={w:560,h:300,l:44,r:96,t:12,b:36};
+  function lineChart(){
+    var svg=$('svgA'); svg.innerHTML=''; var NS='http://www.w3.org/2000/svg';
+    function e(t,a){var n=document.createElementNS(NS,t); for(var k in a)n.setAttribute(k,a[k]); svg.appendChild(n); return n;}
+    var xmax=0; S.forEach(function(s){s.curve.forEach(function(p){xmax=Math.max(xmax,p.x);});}); xmax=xmax||20;
+    var X=function(x){return A.l+(A.w-A.l-A.r)*x/xmax;}, Y=function(y){return A.t+(A.h-A.t-A.b)*(1-y/100);};
+    [0,25,50,75,100].forEach(function(v){e('line',{x1:A.l,x2:A.w-A.r,y1:Y(v),y2:Y(v),stroke:'var(--line)','stroke-width':1}); var t=e('text',{x:A.l-8,y:Y(v)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)','font-family':'IBM Plex Mono, monospace'}); t.textContent=v+'%';});
+    for(var x=0;x<=xmax;x+=4){var t=e('text',{x:X(x),y:A.h-A.b+18,'text-anchor':'middle','font-size':11,fill:'var(--muted)','font-family':'IBM Plex Mono, monospace'}); t.textContent=x;}
+    var xl=e('text',{x:(A.l+A.w-A.r)/2,y:A.h-2,'text-anchor':'middle','font-size':11,fill:'var(--muted)','font-family':'IBM Plex Mono, monospace'}); xl.textContent='offset, mm';
+    e('line',{x1:A.l,x2:A.w-A.r,y1:Y(90),y2:Y(90),stroke:'var(--muted)','stroke-dasharray':'3 4'}); var t9=e('text',{x:A.l+4,y:Y(90)-5,'font-size':10.5,fill:'var(--muted)','font-family':'IBM Plex Mono, monospace'}); t9.textContent='90% seat threshold';
+    var labels=[];
+    S.forEach(function(s){ if(!s.curve.length)return;
+      e('path',{d:s.curve.map(function(p,i){return (i?'L':'M')+X(p.x).toFixed(1)+' '+Y(p.y).toFixed(1);}).join(' '),fill:'none',stroke:'var('+s.o.c+')','stroke-width':2,'stroke-linejoin':'round'});
+      var last=s.curve[s.curve.length-1]; labels.push({y:Y(last.y),s:s,x:X(last.x)});
+    });
+    labels.sort(function(a,b){return a.y-b.y;}); for(var i=1;i<labels.length;i++){ if(labels[i].y-labels[i-1].y<14) labels[i].y=labels[i-1].y+14; }
+    labels.forEach(function(L){var t=e('text',{x:L.x+8,y:L.y+4,'font-size':11.5,fill:'var(--ink)','font-family':'IBM Plex Sans, sans-serif'}); t.textContent='Option '+L.s.o.id; e('rect',{x:L.x+1,y:L.y-1,width:5,height:2,fill:'var('+L.s.o.c+')'});});
+    var cross=e('line',{x1:0,x2:0,y1:A.t,y2:A.h-A.b,stroke:'var(--muted)','stroke-width':1,opacity:0});
+    var dots=S.map(function(s){return e('circle',{r:4.5,fill:'var('+s.o.c+')',stroke:'var(--bg)','stroke-width':2,opacity:0});});
+    var hit=e('rect',{x:A.l,y:A.t,width:A.w-A.l-A.r,height:A.h-A.t-A.b,fill:'transparent'});
+    var tip=$('tipA'), box=$('chA');
+    function move(ev){ var pt=svg.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY; var p=pt.matrixTransform(svg.getScreenCTM().inverse());
+      var xv=Math.round(((p.x-A.l)/(A.w-A.l-A.r)*xmax)/2)*2; xv=Math.max(0,Math.min(xmax,xv));
+      cross.setAttribute('x1',X(xv)); cross.setAttribute('x2',X(xv)); cross.setAttribute('opacity',1);
+      var html='<b>offset '+xv+' mm</b>';
+      S.forEach(function(s,i){var q=s.curve.filter(function(c){return c.x===xv;})[0]; if(q){dots[i].setAttribute('cx',X(q.x)); dots[i].setAttribute('cy',Y(q.y)); dots[i].setAttribute('opacity',1); html+='<br>Option '+s.o.id+': '+Math.round(q.y)+'% ('+q.n+' trials)';}});
+      tip.innerHTML=html; tip.style.opacity=1; var br=box.getBoundingClientRect(); var tx=ev.clientX-br.left+14; if(tx>br.width-170) tx=ev.clientX-br.left-180; tip.style.left=tx+'px'; tip.style.top=(ev.clientY-br.top-10)+'px'; }
+    hit.addEventListener('pointermove',move); hit.addEventListener('pointerleave',function(){tip.style.opacity=0; cross.setAttribute('opacity',0); dots.forEach(function(d){d.setAttribute('opacity',0);});});
+    $('legA').innerHTML=OPT.map(function(o){return '<span><i style="background:var('+o.c+')"></i>Option '+o.n+'</span>';}).join('');
+  }
+  // strip plot
+  function strip(){
+    var svg=$('svgB'); svg.innerHTML=''; var NS='http://www.w3.org/2000/svg', B={w:420,h:300,l:112,r:16,t:14,b:36};
+    function e(t,a){var n=document.createElementNS(NS,t); for(var k in a)n.setAttribute(k,a[k]); svg.appendChild(n); return n;}
+    var mx=0; S.forEach(function(s){s.errs.forEach(function(v){mx=Math.max(mx,v);});}); mx=Math.max(1,Math.ceil(mx));
+    var X=function(v){return B.l+(B.w-B.l-B.r)*v/mx;}; var rowH=(B.h-B.t-B.b)/3;
+    for(var v=0;v<=mx;v+=Math.max(1,Math.round(mx/5))){ e('line',{x1:X(v),x2:X(v),y1:B.t,y2:B.h-B.b,stroke:'var(--line)'}); var t=e('text',{x:X(v),y:B.h-B.b+18,'text-anchor':'middle','font-size':11,fill:'var(--muted)','font-family':'IBM Plex Mono, monospace'}); t.textContent=v; }
+    var xl=e('text',{x:B.w-B.r,y:B.h-4,'text-anchor':'end','font-size':11,fill:'var(--muted)','font-family':'IBM Plex Mono, monospace'}); xl.textContent='error, mm';
+    var r=rng(7), marks=[];
+    S.forEach(function(s,i){ var cy=B.t+rowH*i+rowH/2;
+      var t=e('text',{x:B.l-12,y:cy+4,'text-anchor':'end','font-size':12,fill:'var(--ink)','font-family':'IBM Plex Sans, sans-serif'}); t.textContent='Option '+s.o.id;
+      s.errs.slice(0,160).forEach(function(v){ var c=e('circle',{cx:X(v),cy:cy+(r()-0.5)*rowH*0.55,r:3,fill:'var('+s.o.c+')',opacity:.45}); marks.push({x:+c.getAttribute('cx'),y:+c.getAttribute('cy'),v:v,s:s}); });
+      if(s.med!=null){ e('rect',{x:X(s.med)-2,y:cy-rowH*0.36,width:4,height:rowH*0.72,rx:2,fill:'var(--ink)',stroke:'var(--bg)','stroke-width':2}); marks.push({x:X(s.med),y:cy,v:s.med,s:s,med:true}); }
+    });
+    var tip=$('tipB'), box=$('chB');
+    svg.addEventListener('pointermove',function(ev){ var pt=svg.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY; var p=pt.matrixTransform(svg.getScreenCTM().inverse());
+      var best=null,bd=1e9; marks.forEach(function(m){var d=(m.x-p.x)*(m.x-p.x)+(m.y-p.y)*(m.y-p.y)*(m.med?0.3:1); if(d<bd){bd=d;best=m;}});
+      if(!best||bd>200){tip.style.opacity=0;return;}
+      tip.innerHTML='<b>Option '+best.s.o.id+'</b><br>'+(best.med?'median ':'')+best.v.toFixed(2)+' mm'+(best.med?'<br>'+best.s.errs.length+' successful trials':'');
+      tip.style.opacity=1; var br=box.getBoundingClientRect(); var tx=ev.clientX-br.left+14; if(tx>br.width-160) tx=ev.clientX-br.left-170; tip.style.left=tx+'px'; tip.style.top=(ev.clientY-br.top-10)+'px'; });
+    svg.addEventListener('pointerleave',function(){tip.style.opacity=0;});
+  }
+  // comparison table
+  function table(){
+    var dustS=stats(data.filter(function(d){return d.condition==='dust'&&(mem==='all'||d.member===mem);}));
+    var nomS=stats(data.filter(function(d){return d.condition==='nominal'&&(mem==='all'||d.member===mem);}));
+    function row(lbl,f){return '<tr><td>'+lbl+'</td>'+S.map(function(s,i){return '<td>'+f(s,i)+'</td>';}).join('')+'</tr>';}
+    $('cmpT').innerHTML='<tr><th style="width:28%">Criterion · '+cond+'</th>'+OPT.map(function(o){return '<th>Option '+o.n+'</th>';}).join('')+'</tr>'+
+      row('Grip success, aligned start',function(s){return s.s0==null?'–':Math.round(s.s0)+'%';})+
+      row('Median placement error',function(s){return f1(s.med)+' mm';})+
+      row('Capture range',function(s){return s.cap==null?'–':s.cap+' mm';})+
+      row('Capture lost to dust',function(s,i){var a=nomS[i].cap,b=dustS[i].cap; return (a==null||b==null)?'–':(a-b)+' mm';})+
+      row('Works on plates, columns, walls',function(s){return s.o.id===1?'Needs side access':'Yes, top face free';})+
+      row('Hardware change',function(s){return s.o.id===1?'None':'New end-effector';});
+  }
+  $('condSeg').addEventListener('click',function(e){var b=e.target.closest('button'); if(!b)return; pressed(this,b); cond=b.dataset.c; render();});
+  $('blkFilter').addEventListener('change',function(){mem=this.value; render();});
+  $('csvIn').addEventListener('change',function(){var f=this.files[0]; if(!f)return; var rd=new FileReader(); rd.onload=function(){
+    try{ var lines=String(rd.result).trim().split(/\r?\n/); var h=lines[0].split(',').map(function(s){return s.trim().toLowerCase();});
+      var need=['option','member','condition','offset_mm','success','place_err_mm']; need.forEach(function(n){ if(h.indexOf(n)<0) throw new Error('Missing column "'+n+'"'); });
+      var rows=lines.slice(1).filter(Boolean).map(function(l){var c=l.split(','); var g=function(n){return (c[h.indexOf(n)]||'').trim();};
+        var ok=+g('success'); return {option:+g('option'),member:g('member').toLowerCase(),condition:g('condition').toLowerCase(),offset:+g('offset_mm'),success:ok?1:0,err:g('place_err_mm')===''?null:+g('place_err_mm')};});
+      if(!rows.length) throw new Error('No data rows');
+      data=rows; var b=$('banner'); b.textContent='LOADED · '+f.name+' · '+rows.length+' trials'; b.classList.add('loaded'); render();
+    }catch(err){ var b2=$('banner'); b2.textContent='COULD NOT READ FILE · '+err.message+' · check the column names below'; b2.classList.remove('loaded'); }
+  }; rd.readAsText(f); this.value='';});
+  $('resetData').addEventListener('click',function(){data=illustrative(); var b=$('banner'); b.textContent='ILLUSTRATIVE DATA · NOT RESULTS · load an Isaac Sim CSV to replace'; b.classList.remove('loaded'); render();});
+  render();
+  var mq=matchMedia('(prefers-color-scheme: dark)'); if(mq.addEventListener) mq.addEventListener('change',render);
+})();
+</script>
+
+</body>
+</html>
